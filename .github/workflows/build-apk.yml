@@ -59,23 +59,23 @@ jobs:
           if "import android.util.Base64\n" not in s:
               s = s.replace(
                   "import android.util.Log\n",
-                  "import android.util.Log\nimport android.util.Base64\n"
+                  "import android.util.Log\nimport android.util.Base64\n",
+                  1
               )
 
           if "import java.security.MessageDigest\n" not in s:
               s = s.replace(
                   "import java.util.concurrent.atomic.AtomicBoolean\n",
-                  "import java.util.concurrent.atomic.AtomicBoolean\n"
                   "import java.security.MessageDigest\n"
+                  "import java.util.concurrent.atomic.AtomicBoolean\n",
+                  1
               )
 
-          old = """        val base = filesDir.absolutePath
-          Libv2ray.initCoreEnv(base, DeviceIdentity(this).hwid)
-          core = Libv2ray.newCoreController(callback)
-          """
+          needle = (
+              "        Libv2ray.initCoreEnv(base, DeviceIdentity(this).hwid)\n"
+          )
 
-          new = """        val base = filesDir.absolutePath
-          val hwid = DeviceIdentity(this).hwid
+          replacement = """        val hwid = DeviceIdentity(this).hwid
           val keyBytes = MessageDigest.getInstance("SHA-256")
               .digest(hwid.toByteArray(Charsets.UTF_8))
           val xudpBaseKey = Base64.encodeToString(
@@ -83,15 +83,25 @@ jobs:
               Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP
           )
           Libv2ray.initCoreEnv(base, xudpBaseKey)
-          core = Libv2ray.newCoreController(callback)
           """
 
-          if old not in s:
-              raise SystemExit("STOP: initCoreEnv block not found")
+          if needle not in s:
+              raise SystemExit("STOP: original initCoreEnv line not found")
 
-          p.write_text(s.replace(old, new, 1))
+          s = s.replace(needle, replacement, 1)
+          p.write_text(s)
+
           print("XUDP BaseKey patch: OK")
           PY
+
+      - name: Verify XUDP patch
+        shell: bash
+        run: |
+          grep -n 'xudpBaseKey' \
+            buildsrc/TrueWebAndroid-v0.4/app/src/main/java/ru/trueweb/vpn/vpn/TrueWebVpnService.kt
+
+          grep -n 'MessageDigest' \
+            buildsrc/TrueWebAndroid-v0.4/app/src/main/java/ru/trueweb/vpn/vpn/TrueWebVpnService.kt
 
       - name: Download Xray Android core
         shell: bash
@@ -113,10 +123,6 @@ jobs:
           unzip -l \
             buildsrc/TrueWebAndroid-v0.4/app/libs/libv2ray.aar \
             | grep -q 'jni/arm64-v8a/'
-
-          echo "libv2ray.aar SHA256: $(sha256sum \
-            buildsrc/TrueWebAndroid-v0.4/app/libs/libv2ray.aar \
-            | awk '{print $1}')"
 
       - name: Build APK
         working-directory: buildsrc/TrueWebAndroid-v0.4
