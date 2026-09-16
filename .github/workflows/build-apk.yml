@@ -1,0 +1,49 @@
+name: Build TrueWeb APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 37
+        run: |
+          yes | sdkmanager --licenses || true
+          sdkmanager "platforms;android-37" "platform-tools"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.6.0"
+
+      - name: Unpack TrueWeb
+        run: |
+          mkdir buildsrc
+          unzip -q TrueWebAndroid-v0.1.zip -d buildsrc
+
+      - name: Build APK
+        working-directory: buildsrc/TrueWebAndroid-v0.1
+        run: gradle :app:assembleDebug --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: TrueWeb-APK
+          path: buildsrc/TrueWebAndroid-v0.1/app/build/outputs/apk/debug/app-debug.apk
