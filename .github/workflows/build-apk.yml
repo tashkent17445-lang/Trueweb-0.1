@@ -50,5 +50,4 @@ jobs:
         with:
           name: TrueWeb-APK-v0.2
           path: buildsrc/TrueWebAndroid-v0.2/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error          path: buildsrc/TrueWebAndroid-v0.1/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
