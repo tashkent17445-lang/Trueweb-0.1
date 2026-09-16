@@ -1,4 +1,4 @@
-name: Build TrueWeb APK
+name: Build TrueWeb APK v0.3
 
 on:
   workflow_dispatch:
@@ -35,19 +35,32 @@ jobs:
         with:
           gradle-version: "9.6.0"
 
-      - name: Unpack TrueWeb
+      - name: Unpack TrueWeb v0.3
+        shell: bash
         run: |
           rm -rf buildsrc
           mkdir -p buildsrc
-          unzip -q TrueWebAndroid-v0.2.zip -d buildsrc
+          unzip -q TrueWebAndroid-v0.3.zip -d buildsrc
+          test -f buildsrc/TrueWebAndroid-v0.3/app/build.gradle.kts
+
+      - name: Download verified sing-box libbox
+        shell: bash
+        run: |
+          mkdir -p buildsrc/TrueWebAndroid-v0.3/app/libs
+          curl -fL --retry 3 \
+            https://jitpack.io/com/github/singbox-android/libbox/1.13.14/libbox-1.13.14.aar \
+            -o buildsrc/TrueWebAndroid-v0.3/app/libs/libbox.aar
+          echo "D8EE7620047E4485199A9CF8DB30E67D1497534117F1774A93C0696068B7B012  buildsrc/TrueWebAndroid-v0.3/app/libs/libbox.aar" | sha256sum -c -
+          unzip -l buildsrc/TrueWebAndroid-v0.3/app/libs/libbox.aar | grep -q 'jni/arm64-v8a/libbox.so'
 
       - name: Build APK
-        working-directory: buildsrc/TrueWebAndroid-v0.2
-        run: gradle :app:assembleDebug --stacktrace --no-daemon
+        working-directory: buildsrc/TrueWebAndroid-v0.3
+        shell: bash
+        run: gradle clean :app:assembleDebug --stacktrace --no-daemon --no-build-cache
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: TrueWeb-APK-v0.2
-          path: buildsrc/TrueWebAndroid-v0.2/app/build/outputs/apk/debug/app-debug.apk
+          name: TrueWeb-APK-v0.3
+          path: buildsrc/TrueWebAndroid-v0.3/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
