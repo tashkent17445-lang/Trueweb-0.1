@@ -12,21 +12,23 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android SDK 37
+      - name: Install Android SDK
+        shell: bash
         run: |
-          yes | sdkmanager --licenses || true
-          sdkmanager "platforms;android-37" "platform-tools"
+          SDKMANAGER="${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" \
+            "platform-tools" \
+            "platforms;android-37" \
+            "build-tools;36.0.0"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -35,15 +37,17 @@ jobs:
 
       - name: Unpack TrueWeb
         run: |
-          mkdir buildsrc
+          rm -rf buildsrc
+          mkdir -p buildsrc
           unzip -q TrueWebAndroid-v0.1.zip -d buildsrc
 
       - name: Build APK
         working-directory: buildsrc/TrueWebAndroid-v0.1
-        run: gradle :app:assembleDebug --stacktrace
+        run: gradle :app:assembleDebug --stacktrace --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: TrueWeb-APK
           path: buildsrc/TrueWebAndroid-v0.1/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
