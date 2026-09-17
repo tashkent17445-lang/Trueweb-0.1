@@ -1,4 +1,4 @@
-name: Build TrueWeb APK v0.4 Xray
+name: Build TrueWeb APK v0.8.3 Release
 
 on:
   workflow_dispatch:
@@ -6,9 +6,13 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -24,7 +28,9 @@ jobs:
         shell: bash
         run: |
           SDKMANAGER="${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager"
+
           yes | "$SDKMANAGER" --licenses >/dev/null || true
+
           "$SDKMANAGER" \
             "platform-tools" \
             "platforms;android-37.0" \
@@ -35,77 +41,34 @@ jobs:
         with:
           gradle-version: "9.6.0"
 
-      - name: Unpack TrueWeb v0.4
+      - name: Unpack TrueWeb source
         shell: bash
         run: |
+          set -euo pipefail
+
           rm -rf buildsrc
           mkdir -p buildsrc
+
+          test -f TrueWebAndroid-v0.4.zip
+
           unzip -q TrueWebAndroid-v0.4.zip -d buildsrc
+
           test -f buildsrc/TrueWebAndroid-v0.4/app/build.gradle.kts
 
-      - name: Fix XUDP BaseKey
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          p = Path(
-              "buildsrc/TrueWebAndroid-v0.4/"
-              "app/src/main/java/ru/trueweb/vpn/vpn/TrueWebVpnService.kt"
-          )
-
-          s = p.read_text()
-
-          if "import android.util.Base64\n" not in s:
-              s = s.replace(
-                  "import android.util.Log\n",
-                  "import android.util.Log\nimport android.util.Base64\n",
-                  1
-              )
-
-          if "import java.security.MessageDigest\n" not in s:
-              s = s.replace(
-                  "import java.util.concurrent.atomic.AtomicBoolean\n",
-                  "import java.security.MessageDigest\n"
-                  "import java.util.concurrent.atomic.AtomicBoolean\n",
-                  1
-              )
-
-          needle = (
-              "        Libv2ray.initCoreEnv(base, DeviceIdentity(this).hwid)\n"
-          )
-
-          replacement = """        val hwid = DeviceIdentity(this).hwid
-          val keyBytes = MessageDigest.getInstance("SHA-256")
-              .digest(hwid.toByteArray(Charsets.UTF_8))
-          val xudpBaseKey = Base64.encodeToString(
-              keyBytes,
-              Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP
-          )
-          Libv2ray.initCoreEnv(base, xudpBaseKey)
-          """
-
-          if needle not in s:
-              raise SystemExit("STOP: original initCoreEnv line not found")
-
-          s = s.replace(needle, replacement, 1)
-          p.write_text(s)
-
-          print("XUDP BaseKey patch: OK")
-          PY
-
-      - name: Verify XUDP patch
-        shell: bash
-        run: |
-          grep -n 'xudpBaseKey' \
-            buildsrc/TrueWebAndroid-v0.4/app/src/main/java/ru/trueweb/vpn/vpn/TrueWebVpnService.kt
-
-          grep -n 'MessageDigest' \
-            buildsrc/TrueWebAndroid-v0.4/app/src/main/java/ru/trueweb/vpn/vpn/TrueWebVpnService.kt
+          echo "TrueWeb source unpacked successfully"
 
       - name: Download Xray Android core
         shell: bash
         run: |
+          set -euo pipefail
+
+          LIBS="buildsrc/TrueWebAndroid-v0.4/app/libs"
+          mkdir -p "$LIBS"
+
+          curl -fL \
+            --retry 4 \
+            --retry-delay 2 \
+            https        run: |
           mkdir -p buildsrc/TrueWebAndroid-v0.4/app/libs
 
           curl -fL --retry 3 --retry-delay 2 \
