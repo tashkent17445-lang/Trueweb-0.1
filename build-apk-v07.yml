@@ -1,0 +1,119 @@
+name: Build TrueWeb APK v0.7 Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Android SDK
+        shell: bash
+        run: |
+          SDKMANAGER="${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" \
+            "platform-tools" \
+            "platforms;android-37.0" \
+            "build-tools;36.0.0"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.6.0"
+
+      - name: Unpack TrueWeb source
+        shell: bash
+        run: |
+          rm -rf buildsrc
+          mkdir -p buildsrc
+          unzip -q TrueWebAndroid-v0.4.zip -d buildsrc
+          test -f buildsrc/TrueWebAndroid-v0.4/app/build.gradle.kts
+
+      - name: Download Xray Android core
+        shell: bash
+        run: |
+          mkdir -p buildsrc/TrueWebAndroid-v0.4/app/libs
+          curl -fL --retry 4 --retry-delay 2 \
+            https://github.com/2dust/AndroidLibXrayLite/releases/download/v26.7.31/libv2ray.aar \
+            -o buildsrc/TrueWebAndroid-v0.4/app/libs/libv2ray.aar
+          unzip -t buildsrc/TrueWebAndroid-v0.4/app/libs/libv2ray.aar >/dev/null
+          unzip -l buildsrc/TrueWebAndroid-v0.4/app/libs/libv2ray.aar | grep -q 'classes.jar'
+          unzip -l buildsrc/TrueWebAndroid-v0.4/app/libs/libv2ray.aar | grep -q 'jni/arm64-v8a/'
+
+      - name: Download current GeoIP and GeoSite data
+        shell: bash
+        run: |
+          ASSETS=buildsrc/TrueWebAndroid-v0.4/app/src/main/assets
+          mkdir -p "$ASSETS"
+          curl -fL --retry 4 --retry-delay 2 \
+            https://github.com/v2fly/geoip/releases/latest/download/geoip.dat \
+            -o "$ASSETS/geoip.dat"
+          curl -fL --retry 4 --retry-delay 2 \
+            https://github.com/v2fly/domain-list-community/releases/latest/download/dlc.dat \
+            -o "$ASSETS/geosite.dat"
+          test -s "$ASSETS/geoip.dat"
+          test -s "$ASSETS/geosite.dat"
+          ls -lh "$ASSETS/geoip.dat" "$ASSETS/geosite.dat"
+
+      - name: Prepare permanent release signing key
+        shell: bash
+        env:
+          TW_KEYSTORE_BASE64: ${{ secrets.TW_KEYSTORE_BASE64 }}
+          TW_KEYSTORE_PASSWORD: ${{ secrets.TW_KEYSTORE_PASSWORD }}
+          TW_KEY_ALIAS: ${{ secrets.TW_KEY_ALIAS }}
+          TW_KEY_PASSWORD: ${{ secrets.TW_KEY_PASSWORD }}
+        run: |
+          test -n "$TW_KEYSTORE_BASE64" || { echo 'Missing TW_KEYSTORE_BASE64 secret'; exit 1; }
+          test -n "$TW_KEYSTORE_PASSWORD" || { echo 'Missing TW_KEYSTORE_PASSWORD secret'; exit 1; }
+          test -n "$TW_KEY_ALIAS" || { echo 'Missing TW_KEY_ALIAS secret'; exit 1; }
+          test -n "$TW_KEY_PASSWORD" || { echo 'Missing TW_KEY_PASSWORD secret'; exit 1; }
+          printf '%s' "$TW_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/trueweb-release.jks"
+          keytool -list \
+            -keystore "$RUNNER_TEMP/trueweb-release.jks" \
+            -storepass "$TW_KEYSTORE_PASSWORD" \
+            -alias "$TW_KEY_ALIAS" >/dev/null
+
+      - name: Build signed release APK
+        working-directory: buildsrc/TrueWebAndroid-v0.4
+        shell: bash
+        env:
+          TW_KEYSTORE_PATH: ${{ runner.temp }}/trueweb-release.jks
+          TW_KEYSTORE_PASSWORD: ${{ secrets.TW_KEYSTORE_PASSWORD }}
+          TW_KEY_ALIAS: ${{ secrets.TW_KEY_ALIAS }}
+          TW_KEY_PASSWORD: ${{ secrets.TW_KEY_PASSWORD }}
+        run: |
+          gradle clean :app:assembleRelease \
+            --stacktrace \
+            --no-daemon \
+            --no-build-cache
+
+      - name: Verify APK signature
+        shell: bash
+        run: |
+          APK=buildsrc/TrueWebAndroid-v0.4/app/build/outputs/apk/release/app-release.apk
+          test -f "$APK"
+          "${ANDROID_SDK_ROOT}/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: TrueWeb-APK-v0.7-Release
+          path: buildsrc/TrueWebAndroid-v0.4/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
