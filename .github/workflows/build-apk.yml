@@ -1,4 +1,4 @@
-name: Build TrueWeb APK v0.8.6 Release
+name: Build TrueWeb APK v0.8.7 Release
 
 on:
   workflow_dispatch:
@@ -49,11 +49,11 @@ jobs:
           rm -rf buildsrc
           mkdir -p buildsrc
 
-          test -f TrueWebAndroid-v0.8.6-windows-buttons-source.zip
+          test -f TrueWebAndroid-v0.8.7-windows-settings-source.zip
 
-          unzip -q TrueWebAndroid-v0.8.6-windows-buttons-source.zip -d buildsrc
+          unzip -q TrueWebAndroid-v0.8.7-windows-settings-source.zip -d buildsrc
 
-          test -f buildsrc/TrueWebAndroid-v0.8.6/app/build.gradle.kts
+          test -f buildsrc/TrueWebAndroid-v0.8.7/app/build.gradle.kts
 
           echo "TrueWeb source unpacked successfully"
 
@@ -62,7 +62,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          LIBS="buildsrc/TrueWebAndroid-v0.8.6/app/libs"
+          LIBS="buildsrc/TrueWebAndroid-v0.8.7/app/libs"
           mkdir -p "$LIBS"
 
           curl -fL \
@@ -83,7 +83,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          ASSETS="buildsrc/TrueWebAndroid-v0.8.6/app/src/main/assets"
+          ASSETS="buildsrc/TrueWebAndroid-v0.8.7/app/src/main/assets"
           mkdir -p "$ASSETS"
 
           curl -fL \
@@ -154,7 +154,7 @@ jobs:
           echo "Release signing key verified"
 
       - name: Build signed release APK
-        working-directory: buildsrc/TrueWebAndroid-v0.8.6
+        working-directory: buildsrc/TrueWebAndroid-v0.8.7
         shell: bash
         env:
           TW_KEYSTORE_PATH: ${{ runner.temp }}/trueweb-release.jks
@@ -176,7 +176,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          APK="buildsrc/TrueWebAndroid-v0.8.6/app/build/outputs/apk/release/app-release.apk"
+          APK="buildsrc/TrueWebAndroid-v0.8.7/app/build/outputs/apk/release/app-release.apk"
           APKSIGNER="${ANDROID_SDK_ROOT}/build-tools/36.0.0/apksigner"
 
           test -s "$APK"
@@ -194,21 +194,21 @@ jobs:
           mkdir -p release
 
           cp \
-            buildsrc/TrueWebAndroid-v0.8.6/app/build/outputs/apk/release/app-release.apk \
-            release/TrueWeb-v0.8.6.apk
+            buildsrc/TrueWebAndroid-v0.8.7/app/build/outputs/apk/release/app-release.apk \
+            release/TrueWeb-v0.8.7.apk
 
           sha256sum \
-            release/TrueWeb-v0.8.6.apk \
-            | tee release/TrueWeb-v0.8.6.apk.sha256
+            release/TrueWeb-v0.8.7.apk \
+            | tee release/TrueWeb-v0.8.7.apk.sha256
 
           ls -lh release/
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: TrueWeb-v0.8.6-Release
+          name: TrueWeb-v0.8.7-Release
           path: |
-            release/TrueWeb-v0.8.6.apk
-            release/TrueWeb-v0.8.6.apk.sha256
+            release/TrueWeb-v0.8.7.apk
+            release/TrueWeb-v0.8.7.apk.sha256
           if-no-files-found: error
           retention-days: 30
