@@ -66,6 +66,7 @@ fun HomeScreen(
     paymentLoadingProduct: String?,
     paymentChecking: Boolean,
     paymentMessage: String?,
+    paymentPriceLabels: Map<String, String>,
     hasPendingPayment: Boolean,
     accountActionLoading: Boolean,
     accountActionMessage: String?,
@@ -521,6 +522,7 @@ fun HomeScreen(
                                                 tariff = tariff,
                                                 loading = paymentLoadingProduct == tariff.code,
                                                 enabled = paymentLoadingProduct == null && !paymentChecking,
+                                                priceLabel = paymentPriceLabels[tariff.code],
                                                 onClick = { onPay(tariff.code) }
                                             )
                                         }
@@ -540,7 +542,7 @@ fun HomeScreen(
                                                 CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                                                 Spacer(Modifier.width(8.dp))
                                                 Text(t("Создаём платёж…", "Creating payment…"))
-                                            } else Text("+ ${L10n.serverText(deviceProduct.title)} — ${deviceProduct.price} ₽")
+                                            } else Text("+ ${L10n.serverText(deviceProduct.title)} — ${paymentPriceLabels[deviceProduct.code] ?: "${deviceProduct.price} ₽"}")
                                         }
                                     }
 
@@ -1185,7 +1187,13 @@ private fun SubscriptionManagementScreen(
 }
 
 @Composable
-private fun TariffButton(tariff: TariffOption, loading: Boolean, enabled: Boolean, onClick: () -> Unit) {
+private fun TariffButton(
+    tariff: TariffOption,
+    loading: Boolean,
+    enabled: Boolean,
+    priceLabel: String?,
+    onClick: () -> Unit
+) {
     Button(
         onClick = onClick,
         enabled = enabled,
@@ -1201,7 +1209,7 @@ private fun TariffButton(tariff: TariffOption, loading: Boolean, enabled: Boolea
             if (tariff.badge.isNotBlank()) {
                 Text("${tariff.badge}  ", style = MaterialTheme.typography.labelSmall)
             }
-            Text("${tariff.price} ₽", fontWeight = FontWeight.Bold)
+            Text(priceLabel ?: "${tariff.price} ₽", fontWeight = FontWeight.Bold)
         }
     }
 }
