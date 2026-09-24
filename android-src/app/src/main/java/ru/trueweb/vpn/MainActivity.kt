@@ -5,6 +5,7 @@ import ru.trueweb.vpn.i18n.L10n.t
 import ru.trueweb.vpn.i18n.LanguageMode
 
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
@@ -41,6 +42,7 @@ import ru.trueweb.vpn.ui.*
 import ru.trueweb.vpn.vpn.TrueWebVpnService
 import ru.trueweb.vpn.work.GeoDataRefreshWorker
 import ru.trueweb.vpn.work.SubscriptionRefreshWorker
+import java.security.MessageDigest
 
 class MainActivity : ComponentActivity() {
     private fun genericAppError(): String =
@@ -164,6 +166,7 @@ class MainActivity : ComponentActivity() {
                         errorText = authError,
                         themeMode = themeMode,
                         emailCodeSentTo = emailCodeSentTo,
+                        huaweiDiagnostics = buildHuaweiDiagnostics(),
                         onProxyClick = { openExternal(AppConfig.TELEGRAM_PROXY_URL) },
                         onHuaweiLoginClick = { beginHuaweiLogin() },
                         onTelegramLoginClick = {
@@ -1132,6 +1135,68 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }.start()
+    }
+
+    private fun buildHuaweiDiagnostics(): String {
+        fun packageVersion(pkg: String): String {
+            return try {
+                val info = packageManager.getPackageInfo(pkg, 0)
+                val code = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    info.longVersionCode
+                } else {
+                    @Suppress("DEPRECATION")
+                    info.versionCode.toLong()
+                }
+                "${info.versionName ?: "?"} ($code)"
+            } catch (_: Throwable) {
+                "not installed"
+            }
+        }
+
+        fun signingSha256(): String {
+            return runCatching {
+                val bytes = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    val info = packageManager.getPackageInfo(
+                        packageName,
+                        PackageManager.GET_SIGNING_CERTIFICATES
+                    )
+                    info.signingInfo?.apkContentsSigners?.firstOrNull()?.toByteArray()
+                } else {
+                    @Suppress("DEPRECATION")
+                    packageManager.getPackageInfo(
+                        packageName,
+                        PackageManager.GET_SIGNATURES
+                    ).signatures?.firstOrNull()?.toByteArray()
+                } ?: error("certificate unavailable")
+
+                MessageDigest.getInstance("SHA-256")
+                    .digest(bytes)
+                    .joinToString(":") { "%02X".format(it) }
+            }.getOrElse { "unavailable: ${it.javaClass.simpleName}" }
+        }
+
+        val configuredAppId = runCatching {
+            val info = packageManager.getApplicationInfo(
+                packageName,
+                PackageManager.GET_META_DATA
+            )
+            info.metaData?.getString("com.huawei.hms.client.appid") ?: "missing"
+        }.getOrDefault("missing")
+
+        return buildString {
+            appendLine("TrueWeb ${BuildConfig.VERSION_NAME} (code ${BuildConfig.VERSION_CODE})")
+            appendLine("Package: $packageName")
+            appendLine("Configured App ID: $configuredAppId")
+            appendLine("SHA-256:")
+            appendLine(signingSha256())
+            appendLine()
+            appendLine("HMS Core (com.huawei.hwid): ${packageVersion("com.huawei.hwid")}")
+            appendLine("AppGallery (com.huawei.appmarket): ${packageVersion("com.huawei.appmarket")}")
+            appendLine("Android: ${Build.VERSION.RELEASE} / API ${Build.VERSION.SDK_INT}")
+            appendLine("Device: ${Build.MANUFACTURER} ${Build.MODEL}")
+            appendLine()
+            append("Expected App ID: appid=119100451")
+        }
     }
 
     private fun openExternal(url: String) {
