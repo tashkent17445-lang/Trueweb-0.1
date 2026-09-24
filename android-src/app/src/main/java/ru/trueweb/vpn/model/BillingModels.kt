@@ -1,5 +1,7 @@
 package ru.trueweb.vpn.model
 
+import ru.trueweb.vpn.i18n.L10n.t
+
 import org.json.JSONObject
 
 data class TariffOption(
@@ -29,7 +31,7 @@ data class DeviceProduct(
     companion object {
         fun fromApi(json: JSONObject): DeviceProduct = DeviceProduct(
             code = json.optString("code", "device"),
-            title = json.optString("title", "Дополнительное устройство"),
+            title = json.optString("title", t("Дополнительное устройство", "Additional device")),
             price = json.optInt("price", 0),
             days = json.optInt("days", 30)
         )
@@ -51,7 +53,7 @@ data class DeviceItem(
     companion object {
         fun fromApi(json: JSONObject): DeviceItem = DeviceItem(
             id = json.optInt("id", 0),
-            title = json.optString("title", "Устройство"),
+            title = json.optString("title", t("Устройство", "Device")),
             details = json.optString("details", ""),
             lastSeenMs = json.optLong("last_seen_ms", 0L),
             isCurrent = json.optBoolean("is_current", false)
