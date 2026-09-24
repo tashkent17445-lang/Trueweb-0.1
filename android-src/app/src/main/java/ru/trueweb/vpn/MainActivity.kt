@@ -857,7 +857,7 @@ class MainActivity : ComponentActivity() {
     private fun serverErrorText(t: Throwable): String {
         val msg = cleanError(t)
         return when {
-            msg.contains("Лимит устройств", ignoreCase = true) -> msg
+            msg.contains("Лимит устройств", ignoreCase = true) -> t(msg, "Device limit reached")
             (t.message ?: "").contains("HTTP 403") -> t("Лимит устройств исчерпан. Откройте «Управление подпиской» и удалите старое устройство или добавьте слот.", "Device limit reached. Open Manage subscription and remove an old device or add a slot.")
             else -> t("Не удалось обновить серверы: $msg", "Could not refresh servers: $msg")
         }
