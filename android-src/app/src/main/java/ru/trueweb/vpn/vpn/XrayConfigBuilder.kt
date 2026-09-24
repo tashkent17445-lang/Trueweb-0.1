@@ -1,5 +1,7 @@
 package ru.trueweb.vpn.vpn
 
+import ru.trueweb.vpn.i18n.L10n.t
+
 import android.net.Uri
 import org.json.JSONArray
 import org.json.JSONObject
@@ -25,8 +27,8 @@ object XrayConfigBuilder {
         smartAuto: Boolean = true,
         bypassRu: Boolean = true
     ): BuiltConfig {
-        require(server.available && !server.uri.isNullOrBlank()) { "VPN-вход недоступен" }
-        require(server.protocol.equals("vless", ignoreCase = true)) { "Поддерживается только VLESS" }
+        require(server.available && !server.uri.isNullOrBlank()) { t("VPN-вход недоступен", "VPN endpoint is unavailable") }
+        require(server.protocol.equals("vless", ignoreCase = true)) { t("Поддерживается только VLESS", "Only VLESS is supported") }
 
         val vpnOutbound = parseVlessOutbound(server, VPN_OUTBOUND)
         val root = JSONObject()
@@ -147,15 +149,15 @@ object XrayConfigBuilder {
         )
 
     private fun parseVlessOutbound(server: VpnServer, tag: String): JSONObject {
-        val raw = server.uri ?: error("Пустая VLESS-ссылка")
+        val raw = server.uri ?: error(t("Пустая VLESS-ссылка", "Empty VLESS link"))
         val uri = Uri.parse(raw)
-        require(uri.scheme.equals("vless", ignoreCase = true)) { "Поддерживается только VLESS" }
+        require(uri.scheme.equals("vless", ignoreCase = true)) { t("Поддерживается только VLESS", "Only VLESS is supported") }
 
         val uuid = (uri.userInfo ?: "").substringBefore(':').trim()
         val host = uri.host?.trim().orEmpty()
         val port = uri.port.takeIf { it > 0 } ?: 443
-        require(uuid.isNotBlank()) { "В VLESS-ссылке нет UUID" }
-        require(host.isNotBlank()) { "В VLESS-ссылке нет адреса сервера" }
+        require(uuid.isNotBlank()) { t("В VLESS-ссылке нет UUID", "VLESS link has no UUID") }
+        require(host.isNotBlank()) { t("В VLESS-ссылке нет адреса сервера", "VLESS link has no server address") }
 
         fun q(name: String): String? = uri.getQueryParameter(name)?.trim()?.takeIf { it.isNotBlank() }
 
@@ -182,7 +184,7 @@ object XrayConfigBuilder {
                 q("mode")?.let { xhttp.put("mode", it) }
                 q("extra")?.let { extraRaw ->
                     val parsedExtra = runCatching { JSONTokener(extraRaw).nextValue() }.getOrNull()
-                        ?: throw IllegalArgumentException("Некорректный XHTTP extra")
+                        ?: throw IllegalArgumentException(t("Некорректный XHTTP extra", "Invalid XHTTP extra"))
                     xhttp.put("extra", parsedExtra)
                 }
                 stream.put("xhttpSettings", xhttp)
@@ -227,7 +229,7 @@ object XrayConfigBuilder {
             "tcp", "raw" -> {
                 stream.put("network", if (network.equals("raw", true)) "raw" else "tcp")
             }
-            else -> throw IllegalArgumentException("Транспорт '$network' пока не поддерживается")
+            else -> throw IllegalArgumentException(t("Транспорт '$network' пока не поддерживается", "Transport '$network' is not supported yet"))
         }
 
         when (security.lowercase()) {
@@ -244,7 +246,7 @@ object XrayConfigBuilder {
                         alpn.split(',').map(String::trim).filter(String::isNotBlank).forEach(::put)
                     })
                 }
-                require(reality.optString("publicKey").isNotBlank()) { "REALITY: нет public key (pbk)" }
+                require(reality.optString("publicKey").isNotBlank()) { t("REALITY: нет public key (pbk)", "REALITY: public key (pbk) is missing") }
                 stream.put("security", "reality")
                 stream.put("realitySettings", reality)
             }
@@ -263,7 +265,7 @@ object XrayConfigBuilder {
                 stream.put("tlsSettings", tls)
             }
             "none", "" -> stream.put("security", "none")
-            else -> throw IllegalArgumentException("Security '$security' пока не поддерживается")
+            else -> throw IllegalArgumentException(t("Security '$security' пока не поддерживается", "Security '$security' is not supported yet"))
         }
 
         // XHTTP already multiplexes requests internally; Xray/v2rayNG also disables mux here.
