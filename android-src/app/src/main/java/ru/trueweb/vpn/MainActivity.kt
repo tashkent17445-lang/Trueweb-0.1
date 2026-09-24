@@ -1,6 +1,8 @@
 package ru.trueweb.vpn
 
+import ru.trueweb.vpn.i18n.L10n
 import ru.trueweb.vpn.i18n.L10n.t
+import ru.trueweb.vpn.i18n.LanguageMode
 
 import android.content.Intent
 import android.net.ConnectivityManager
@@ -39,9 +41,11 @@ import ru.trueweb.vpn.work.GeoDataRefreshWorker
 import ru.trueweb.vpn.work.SubscriptionRefreshWorker
 
 class MainActivity : ComponentActivity() {
-    companion object {
-        private val GENERIC_APP_ERROR = t("Что-то пошло не так. Отчёт об ошибке уже отправлен разработчику. Попробуйте немного позже.", "Something went wrong. An error report has been sent to the developer. Please try again later.")
-    }
+    private fun genericAppError(): String =
+        t(
+            "Что-то пошло не так. Отчёт об ошибке уже отправлен разработчику. Попробуйте немного позже.",
+            "Something went wrong. An error report has been sent to the developer. Please try again later."
+        )
 
     private lateinit var sessionStore: SessionStore
     private lateinit var serverStore: ServerStore
@@ -62,6 +66,7 @@ class MainActivity : ComponentActivity() {
     private var servers by mutableStateOf<List<VpnServer>>(emptyList())
     private var pendingVpnMode by mutableStateOf(VpnMode.NORMAL)
     private var themeMode by mutableStateOf(TrueWebThemeMode.DARK)
+    private var languageMode by mutableStateOf(LanguageMode.AUTO)
 
     private var profileLoading by mutableStateOf(false)
     private var profileError by mutableStateOf<String?>(null)
@@ -93,6 +98,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        L10n.initialize(this)
+        languageMode = L10n.mode
         sessionStore = SessionStore(this)
         serverStore = ServerStore(this)
         deviceIdentity = DeviceIdentity(this)
@@ -182,6 +189,7 @@ class MainActivity : ComponentActivity() {
                             vpnError = vpnError,
                             vpnMode = vpnMode,
                             themeMode = themeMode,
+                            languageMode = languageMode,
                             tariffs = tariffs,
                             deviceProduct = deviceProduct,
                             devices = devices,
@@ -209,6 +217,7 @@ class MainActivity : ComponentActivity() {
                             onDismissPendingPayment = { dismissPendingPayment() },
                             onDeleteDevice = { deleteDevice(it) },
                             onThemeChanged = { setTheme(it) },
+                            onLanguageChanged = { setLanguage(it) },
                             showTelegramLink = sessionStore.needsTelegramLink,
                             onLinkTelegram = { beginTelegramLink() },
                             onSetPasswordCredentials = { login, password -> setPasswordCredentials(login, password) },
@@ -457,7 +466,7 @@ class MainActivity : ComponentActivity() {
                     profileError = serverError?.let {
                         if (shouldReportUnexpectedError(it)) {
                             reportUnexpectedAppError("servers_refresh", it)
-                            GENERIC_APP_ERROR
+                            genericAppError()
                         } else {
                             serverErrorText(it)
                         }
@@ -677,7 +686,7 @@ class MainActivity : ComponentActivity() {
                     val e = error!!
                     profileError = if (shouldReportUnexpectedError(e)) {
                         reportUnexpectedAppError("servers_preconnect", e)
-                        GENERIC_APP_ERROR
+                        genericAppError()
                     } else {
                         serverErrorText(e)
                     }
@@ -708,6 +717,13 @@ class MainActivity : ComponentActivity() {
     private fun setTheme(mode: TrueWebThemeMode) {
         themeStore.mode = mode
         themeMode = mode
+    }
+
+    private fun setLanguage(mode: LanguageMode) {
+        if (languageMode == mode) return
+        L10n.setMode(mode)
+        languageMode = mode
+        recreate()
     }
 
     private fun setPasswordCredentials(login: String, password: String) {
@@ -786,7 +802,7 @@ class MainActivity : ComponentActivity() {
         if (!hasPhysicalNetwork()) return t("Нет подключения к интернету. Проверьте Wi‑Fi или мобильную сеть.", "No internet connection. Check Wi-Fi or mobile data.")
         return if (shouldReportUnexpectedError(t)) {
             reportUnexpectedAppError(stage, t)
-            GENERIC_APP_ERROR
+            genericAppError()
         } else {
             "$prefix: ${cleanError(t)}"
         }
