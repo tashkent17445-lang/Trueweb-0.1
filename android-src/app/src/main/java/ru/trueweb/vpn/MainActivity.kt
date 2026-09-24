@@ -164,11 +164,7 @@ class MainActivity : ComponentActivity() {
                         emailCodeSentTo = emailCodeSentTo,
                         onProxyClick = { openExternal(AppConfig.TELEGRAM_PROXY_URL) },
                         onHuaweiLoginClick = { beginHuaweiLogin() },
-                        onTelegramLoginClick = {
-                            authError = null
-                            sessionStore.telegramLinkPending = false
-                            openExternal(AppConfig.TELEGRAM_AUTH_START)
-                        },
+                        onTelegramLoginClick = { beginTelegramBrowser(linking = false) },
                         onEmailStart = { startEmailAuth(it) },
                         onEmailVerify = { email, code -> verifyEmailAuth(email, code) },
                         onEmailReset = {
@@ -493,10 +489,40 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun beginTelegramLink() {
-        if (!authenticated || !sessionStore.needsTelegramLink) return
-        sessionStore.telegramLinkPending = true
+        beginTelegramBrowser(linking = true)
+    }
+
+    private fun beginTelegramBrowser(linking: Boolean) {
+        if (authInProgress) return
+        if (linking && (!authenticated || !sessionStore.needsTelegramLink)) return
+
+        authInProgress = true
         authError = null
-        openExternal(AppConfig.TELEGRAM_AUTH_START)
+        sessionStore.telegramLinkPending = linking
+
+        Thread {
+            val result = TrueWebApi.telegramAuthUrl()
+            runOnUiThread {
+                authInProgress = false
+                result.onSuccess { oauthUrl ->
+                    openExternal(oauthUrl)
+                }.onFailure {
+                    if (linking) sessionStore.telegramLinkPending = false
+                    authError = if (linking) {
+                        t(
+                            "Не удалось начать привязку Telegram: ${cleanError(it)}",
+                            "Could not start Telegram linking: ${cleanError(it)}"
+                        )
+                    } else {
+                        t(
+                            "Не удалось открыть вход через Telegram: ${cleanError(it)}",
+                            "Could not open Telegram sign-in: ${cleanError(it)}"
+                        )
+                    }
+                    Toast.makeText(this, authError, Toast.LENGTH_LONG).show()
+                }
+            }
+        }.start()
     }
 
     private fun loadData(forceServers: Boolean, onComplete: (() -> Unit)? = null) {
