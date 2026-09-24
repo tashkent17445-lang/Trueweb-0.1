@@ -1,0 +1,155 @@
+name: Build TrueWeb AppGallery v0.8.8
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "android-src/**"
+      - ".github/workflows/build-appgallery.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Verify AppGallery source has no APK installer
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if grep -R -n -E             'REQUEST_INSTALL_PACKAGES|ACTION_MANAGE_UNKNOWN_APP_SOURCES|application/vnd\.android\.package-archive|FileProvider'             android-src/app/src/main
+          then
+            echo "AppGallery build still contains APK installer/self-update code"
+            exit 1
+          fi
+
+          echo "AppGallery installer guard passed"
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Android SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          SDKMANAGER="${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+
+          "$SDKMANAGER"             "platform-tools"             "platforms;android-37.0"             "build-tools;36.0.0"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.6.0"
+
+      - name: Download Xray Android core
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          LIBS="android-src/app/libs"
+          mkdir -p "$LIBS"
+
+          curl -fL             --retry 4             --retry-delay 2             https://github.com/2dust/AndroidLibXrayLite/releases/download/v26.7.31/libv2ray.aar             -o "$LIBS/libv2ray.aar"
+
+          unzip -t "$LIBS/libv2ray.aar" >/dev/null
+          unzip -l "$LIBS/libv2ray.aar" | grep -q 'classes.jar'
+          unzip -l "$LIBS/libv2ray.aar" | grep -q 'jni/arm64-v8a/'
+
+      - name: Download current GeoIP and GeoSite data
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ASSETS="android-src/app/src/main/assets"
+          mkdir -p "$ASSETS"
+
+          curl -fL             --retry 4             --retry-delay 2             https://github.com/v2fly/geoip/releases/latest/download/geoip.dat             -o "$ASSETS/geoip.dat"
+
+          curl -fL             --retry 4             --retry-delay 2             https://github.com/v2fly/domain-list-community/releases/latest/download/dlc.dat             -o "$ASSETS/geosite.dat"
+
+          test -s "$ASSETS/geoip.dat"
+          test -s "$ASSETS/geosite.dat"
+
+      - name: Prepare permanent release signing key
+        shell: bash
+        env:
+          TW_KEYSTORE_BASE64: ${{ secrets.TW_KEYSTORE_BASE64 }}
+          TW_KEYSTORE_PASSWORD: ${{ secrets.TW_KEYSTORE_PASSWORD }}
+          TW_KEY_ALIAS: ${{ secrets.TW_KEY_ALIAS }}
+          TW_KEY_PASSWORD: ${{ secrets.TW_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          test -n "$TW_KEYSTORE_BASE64"
+          test -n "$TW_KEYSTORE_PASSWORD"
+          test -n "$TW_KEY_ALIAS"
+          test -n "$TW_KEY_PASSWORD"
+
+          KEYSTORE_PATH="$RUNNER_TEMP/trueweb-release.jks"
+
+          printf '%s' "$TW_KEYSTORE_BASE64"             | tr -d '\r\n '             | base64 --decode             > "$KEYSTORE_PATH"
+
+          test -s "$KEYSTORE_PATH"
+
+          keytool             -list             -keystore "$KEYSTORE_PATH"             -storepass "$TW_KEYSTORE_PASSWORD"             -alias "$TW_KEY_ALIAS"             >/dev/null
+
+      - name: Build signed AppGallery APK
+        working-directory: android-src
+        shell: bash
+        env:
+          TW_KEYSTORE_PATH: ${{ runner.temp }}/trueweb-release.jks
+          TW_KEYSTORE_PASSWORD: ${{ secrets.TW_KEYSTORE_PASSWORD }}
+          TW_KEY_ALIAS: ${{ secrets.TW_KEY_ALIAS }}
+          TW_KEY_PASSWORD: ${{ secrets.TW_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          gradle             clean             :app:assembleRelease             --stacktrace             --no-daemon             --no-build-cache
+
+      - name: Verify APK signature
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          APK="android-src/app/build/outputs/apk/release/app-release.apk"
+          APKSIGNER="${ANDROID_SDK_ROOT}/build-tools/36.0.0/apksigner"
+
+          test -s "$APK"
+
+          "$APKSIGNER" verify             --verbose             --print-certs             "$APK"
+
+      - name: Prepare AppGallery artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p release
+          cp             android-src/app/build/outputs/apk/release/app-release.apk             release/TrueWeb-v0.8.8-AppGallery.apk
+
+          sha256sum             release/TrueWeb-v0.8.8-AppGallery.apk             | tee release/TrueWeb-v0.8.8-AppGallery.apk.sha256
+
+          ls -lh release/
+
+      - name: Upload AppGallery APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: TrueWeb-v0.8.8-AppGallery
+          path: |
+            release/TrueWeb-v0.8.8-AppGallery.apk
+            release/TrueWeb-v0.8.8-AppGallery.apk.sha256
+          if-no-files-found: error
+          retention-days: 30
