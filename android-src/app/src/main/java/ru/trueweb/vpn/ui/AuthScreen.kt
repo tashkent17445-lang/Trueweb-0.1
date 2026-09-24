@@ -25,6 +25,7 @@ fun AuthScreen(
     themeMode: TrueWebThemeMode,
     emailCodeSentTo: String?,
     onProxyClick: () -> Unit,
+    onHuaweiLoginClick: () -> Unit,
     onTelegramLoginClick: () -> Unit,
     onEmailStart: (String) -> Unit,
     onEmailVerify: (String, String) -> Unit,
@@ -75,6 +76,14 @@ fun AuthScreen(
                 when (view) {
                     AuthView.CHOICE -> {
                         Button(
+                            onClick = onHuaweiLoginClick,
+                            enabled = !authInProgress,
+                            modifier = Modifier.fillMaxWidth().height(56.dp),
+                            shape = RoundedCornerShape(18.dp)
+                        ) { Text(t("Войти с HUAWEI ID", "Sign in with HUAWEI ID"), fontWeight = FontWeight.SemiBold) }
+
+                        Spacer(Modifier.height(12.dp))
+                        OutlinedButton(
                             onClick = { view = AuthView.EMAIL },
                             enabled = !authInProgress,
                             modifier = Modifier.fillMaxWidth().height(56.dp),
