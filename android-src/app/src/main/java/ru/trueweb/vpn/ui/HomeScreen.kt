@@ -1191,7 +1191,7 @@ private fun TariffButton(
     tariff: TariffOption,
     loading: Boolean,
     enabled: Boolean,
-    priceLabel: String?,
+    priceLabel: String? = null,
     onClick: () -> Unit
 ) {
     Button(
