@@ -1,5 +1,8 @@
 package ru.trueweb.vpn.model
 
+import ru.trueweb.vpn.i18n.L10n
+import ru.trueweb.vpn.i18n.L10n.t
+
 import org.json.JSONObject
 import java.util.Locale
 
@@ -22,7 +25,7 @@ data class SubscriptionInfo(
     val trafficUsed: String get() = formatBytes(trafficUsedBytes)
 
     val devicesLabel: String
-        get() = if (devicesLimit <= 0) "$devicesUsed / ∞" else "$devicesUsed из $devicesLimit"
+        get() = if (devicesLimit <= 0) "$devicesUsed / ∞" else t("$devicesUsed из $devicesLimit", "$devicesUsed of $devicesLimit")
 
     companion object {
         fun fromApi(root: JSONObject): SubscriptionInfo {
@@ -35,29 +38,19 @@ data class SubscriptionInfo(
                 trialPending = subscription.optBoolean("trial_pending", false),
                 trialAvailable = subscription.optBoolean("trial_available", false),
                 unlimited = subscription.optBoolean("unlimited", false),
-                expiresLabel = subscription.optString("expires_label", "нет данных"),
+                expiresLabel = subscription.optString("expires_label", t("нет данных", "no data")),
                 daysLeft = subscription.optInt("days_left", 0),
                 trafficUsedBytes = subscription.optLong("traffic_used_bytes", 0L),
                 devicesUsed = subscription.optInt("devices_used", 0),
                 devicesLimit = subscription.optInt("devices_limit", 0),
-                serverName = server.optString("name", "Автовыбор"),
+                serverName = server.optString("name", t("Автовыбор", "Auto-select")),
                 lastOnlineMs = subscription.optLong("last_online_ms", 0L),
                 subscriptionUrl = vpn.optString("subscription_url", "").takeIf { it.isNotBlank() }
             )
         }
 
         private fun formatBytes(bytes: Long): String {
-            val safe = bytes.coerceAtLeast(0L).toDouble()
-            val gib = 1024.0 * 1024.0 * 1024.0
-            val mib = 1024.0 * 1024.0
-            val kib = 1024.0
-            val value = when {
-                safe >= gib -> String.format(Locale.US, "%.1f ГБ", safe / gib)
-                safe >= mib -> String.format(Locale.US, "%.1f МБ", safe / mib)
-                safe >= kib -> String.format(Locale.US, "%.1f КБ", safe / kib)
-                else -> "${safe.toLong()} Б"
-            }
-            return value.replace('.', ',')
+            return L10n.bytes(bytes)
         }
     }
 }
