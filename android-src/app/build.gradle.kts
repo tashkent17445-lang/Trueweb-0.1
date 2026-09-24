@@ -3,6 +3,8 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+apply(plugin = "com.huawei.agconnect")
+
 android {
     namespace = "ru.trueweb.vpn"
     compileSdk = 37
@@ -11,8 +13,8 @@ android {
         applicationId = "ru.trueweb.vpn"
         minSdk = 26
         targetSdk = 37
-        versionCode = 20
-        versionName = "0.9.1"
+        versionCode = 21
+        versionName = "0.9.2"
         ndk {
             abiFilters += listOf("arm64-v8a")
         }
@@ -57,7 +59,7 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.11.2")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 
-    implementation("com.huawei.hms:hwid:6.11.0.300")
+    implementation("com.huawei.hms:hwid:6.13.0.300")
     implementation("com.huawei.hms:iap:6.16.6.305")
 
     val composeBom = platform("androidx.compose:compose-bom:2026.08.00")
