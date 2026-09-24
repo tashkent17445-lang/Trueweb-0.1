@@ -1,6 +1,8 @@
 package ru.trueweb.vpn.ui
 
+import ru.trueweb.vpn.i18n.L10n
 import ru.trueweb.vpn.i18n.L10n.t
+import ru.trueweb.vpn.i18n.LanguageMode
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.RepeatMode
@@ -55,6 +57,7 @@ fun HomeScreen(
     vpnError: String?,
     vpnMode: VpnMode,
     themeMode: TrueWebThemeMode,
+    languageMode: LanguageMode,
     tariffs: List<TariffOption>,
     deviceProduct: DeviceProduct?,
     devices: List<DeviceItem>,
@@ -82,6 +85,7 @@ fun HomeScreen(
     onDismissPendingPayment: () -> Unit,
     onDeleteDevice: (Int) -> Unit,
     onThemeChanged: (TrueWebThemeMode) -> Unit,
+    onLanguageChanged: (LanguageMode) -> Unit,
     showTelegramLink: Boolean,
     onLinkTelegram: () -> Unit,
     onSetPasswordCredentials: (String, String) -> Unit,
@@ -536,7 +540,7 @@ fun HomeScreen(
                                                 CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                                                 Spacer(Modifier.width(8.dp))
                                                 Text(t("Создаём платёж…", "Creating payment…"))
-                                            } else Text("+ ${deviceProduct.title} — ${deviceProduct.price} ₽")
+                                            } else Text("+ ${L10n.serverText(deviceProduct.title)} — ${deviceProduct.price} ₽")
                                         }
                                     }
 
@@ -597,6 +601,26 @@ fun HomeScreen(
                                     SettingsSectionTitle(t("Тема", "Theme"))
                                     ThemeChoice(t("Тёмная — чёрная", "Dark — black"), TrueWebThemeMode.DARK, themeMode, onThemeChanged)
                                     ThemeChoice(t("Светлая — белая", "Light — white"), TrueWebThemeMode.LIGHT, themeMode, onThemeChanged)
+
+                                    SettingsSectionTitle(t("Язык", "Language"))
+                                    LanguageChoice(
+                                        label = t("Автоопределение", "Automatic"),
+                                        mode = LanguageMode.AUTO,
+                                        selected = languageMode,
+                                        onChange = onLanguageChanged
+                                    )
+                                    LanguageChoice(
+                                        label = "English",
+                                        mode = LanguageMode.ENGLISH,
+                                        selected = languageMode,
+                                        onChange = onLanguageChanged
+                                    )
+                                    LanguageChoice(
+                                        label = "Русский",
+                                        mode = LanguageMode.RUSSIAN,
+                                        selected = languageMode,
+                                        onChange = onLanguageChanged
+                                    )
 
                                     SettingsSectionTitle("Android")
                                     OutlinedButton(
@@ -1173,7 +1197,7 @@ private fun TariffButton(tariff: TariffOption, loading: Boolean, enabled: Boolea
             Spacer(Modifier.width(8.dp))
             Text(t("Создаём платёж…", "Creating payment…"))
         } else {
-            Text(tariff.title, modifier = Modifier.weight(1f), textAlign = TextAlign.Start, fontWeight = FontWeight.SemiBold)
+            Text(L10n.serverText(tariff.title), modifier = Modifier.weight(1f), textAlign = TextAlign.Start, fontWeight = FontWeight.SemiBold)
             if (tariff.badge.isNotBlank()) {
                 Text("${tariff.badge}  ", style = MaterialTheme.typography.labelSmall)
             }
@@ -1227,6 +1251,26 @@ private fun ThemeChoice(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().clickable { onChange(mode) }.padding(horizontal = 20.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RadioButton(selected = mode == selected, onClick = null)
+        Spacer(Modifier.width(10.dp))
+        Text(label, color = MaterialTheme.colorScheme.onSurface)
+    }
+}
+
+@Composable
+private fun LanguageChoice(
+    label: String,
+    mode: LanguageMode,
+    selected: LanguageMode,
+    onChange: (LanguageMode) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onChange(mode) }
+            .padding(horizontal = 20.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         RadioButton(selected = mode == selected, onClick = null)
