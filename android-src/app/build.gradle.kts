@@ -13,8 +13,8 @@ android {
         applicationId = "ru.trueweb.vpn"
         minSdk = 26
         targetSdk = 37
-        versionCode = 24
-        versionName = "0.9.5"
+        versionCode = 25
+        versionName = "0.9.6"
         ndk {
             abiFilters += listOf("arm64-v8a")
         }
@@ -60,7 +60,6 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 
     implementation("com.huawei.hms:hwid:6.12.0.300")
-    implementation("com.huawei.hms:iap:6.16.6.305")
 
     val composeBom = platform("androidx.compose:compose-bom:2026.08.00")
     implementation(composeBom)
