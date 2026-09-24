@@ -1,5 +1,7 @@
 package ru.trueweb.vpn.ui
 
+import ru.trueweb.vpn.i18n.L10n.t
+
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -186,7 +188,7 @@ fun HomeScreen(
                     modifier = Modifier.height(44.dp),
                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp)
                 ) {
-                    Text("Выйти")
+                    Text(t("Выйти", "Sign out"))
                 }
             }
 
@@ -214,11 +216,11 @@ fun HomeScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text("Привязать Telegram", fontWeight = FontWeight.SemiBold)
+                            Text(t("Привязать Telegram", "Link Telegram"), fontWeight = FontWeight.SemiBold)
                             Text(
                                 if (vpnState == TrueWebVpnService.TunnelState.RUNNING)
-                                    "VPN уже работает — теперь Telegram откроется."
-                                else "Сначала включите VPN, затем привяжите старый аккаунт.",
+                                    t("VPN уже работает — теперь Telegram откроется.", "VPN is already connected — Telegram will open now.")
+                                else t("Сначала включите VPN, затем привяжите старый аккаунт.", "Connect the VPN first, then link your existing account."),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.bodySmall
                             )
@@ -228,7 +230,7 @@ fun HomeScreen(
                             onClick = onLinkTelegram,
                             enabled = vpnState == TrueWebVpnService.TunnelState.RUNNING,
                             shape = RoundedCornerShape(14.dp)
-                        ) { Text("Привязать") }
+                        ) { Text(t("Привязать", "Link")) }
                     }
                 }
             }
@@ -243,16 +245,16 @@ fun HomeScreen(
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                 ) {
                     Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
-                        Text("VPN во время сна", fontWeight = FontWeight.SemiBold)
+                        Text(t("VPN во время сна", "VPN while the device sleeps"), fontWeight = FontWeight.SemiBold)
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            "Android может ограничивать TrueWeb при выключенном экране. Разрешите работу без ограничений батареи, чтобы VPN оставался стабильнее в фоне.",
+                            t("Android может ограничивать TrueWeb при выключенном экране. Разрешите работу без ограничений батареи, чтобы VPN оставался стабильнее в фоне.", "Android may restrict TrueWeb when the screen is off. Allow unrestricted battery use to keep the VPN more stable in the background."),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodySmall
                         )
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                            TextButton(onClick = onDismissBatteryNotice) { Text("Позже") }
-                            TextButton(onClick = onBatterySettings) { Text("Настроить") }
+                            TextButton(onClick = onDismissBatteryNotice) { Text(t("Позже", "Later")) }
+                            TextButton(onClick = onBatterySettings) { Text(t("Настроить", "Configure")) }
                         }
                     }
                 }
@@ -321,14 +323,14 @@ fun HomeScreen(
             Spacer(Modifier.height(16.dp))
             Text(
                 when {
-                    vpnState == TrueWebVpnService.TunnelState.RUNNING && vpnMode == VpnMode.WHITELIST -> "VPN подключён · резервный режим"
-                    vpnState == TrueWebVpnService.TunnelState.RUNNING -> "VPN подключён"
-                    vpnState == TrueWebVpnService.TunnelState.CONNECTING -> "Подключение…"
-                    vpnState == TrueWebVpnService.TunnelState.ERROR -> "Что-то пошло не так"
-                    !vpnError.isNullOrBlank() -> "VPN отключён"
-                    subscription.active -> "VPN выключен"
-                    subscription.trialAvailable -> "Активируйте бесплатный доступ"
-                    else -> "Подписка не активна"
+                    vpnState == TrueWebVpnService.TunnelState.RUNNING && vpnMode == VpnMode.WHITELIST -> t("VPN подключён · резервный режим", "VPN connected · fallback mode")
+                    vpnState == TrueWebVpnService.TunnelState.RUNNING -> t("VPN подключён", "VPN connected")
+                    vpnState == TrueWebVpnService.TunnelState.CONNECTING -> t("Подключение…", "Connecting…")
+                    vpnState == TrueWebVpnService.TunnelState.ERROR -> t("Что-то пошло не так", "Something went wrong")
+                    !vpnError.isNullOrBlank() -> t("VPN отключён", "VPN disconnected")
+                    subscription.active -> t("VPN выключен", "VPN off")
+                    subscription.trialAvailable -> t("Активируйте бесплатный доступ", "Activate free access")
+                    else -> t("Подписка не активна", "Subscription is inactive")
                 },
                 fontWeight = FontWeight.SemiBold,
                 color = if (vpnOn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
@@ -363,12 +365,12 @@ fun HomeScreen(
                     onClick = onTelegramGroup,
                     modifier = Modifier.weight(1f).height(48.dp),
                     shape = RoundedCornerShape(14.dp)
-                ) { Text("Группа") }
+                ) { Text(t("Группа", "Community")) }
                 OutlinedButton(
                     onClick = onSupport,
                     modifier = Modifier.weight(1f).height(48.dp),
                     shape = RoundedCornerShape(14.dp)
-                ) { Text("Поддержка") }
+                ) { Text(t("Поддержка", "Support")) }
             }
         }
     }
@@ -398,7 +400,7 @@ fun HomeScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text("Настройки", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                            Text(t("Настройки", "Settings"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                             Text(
                                 "TrueWeb Android v${BuildConfig.VERSION_NAME}",
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -408,7 +410,7 @@ fun HomeScreen(
                         OutlinedButton(
                             onClick = { showSettings = false },
                             shape = RoundedCornerShape(14.dp)
-                        ) { Text("Закрыть") }
+                        ) { Text(t("Закрыть", "Close")) }
                     }
 
                     Spacer(Modifier.height(14.dp))
@@ -417,19 +419,19 @@ fun HomeScreen(
                         modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        SettingsNavButton("Подписка", settingsPage == SettingsPage.SUBSCRIPTION) {
+                        SettingsNavButton(t("Подписка", "Subscription"), settingsPage == SettingsPage.SUBSCRIPTION) {
                             settingsPage = SettingsPage.SUBSCRIPTION
                             settingsMessage = null
                         }
-                        SettingsNavButton("Устройства", settingsPage == SettingsPage.DEVICES) {
+                        SettingsNavButton(t("Устройства", "Devices"), settingsPage == SettingsPage.DEVICES) {
                             settingsPage = SettingsPage.DEVICES
                             settingsMessage = null
                         }
-                        SettingsNavButton("Приложение", settingsPage == SettingsPage.APP) {
+                        SettingsNavButton(t("Приложение", "App"), settingsPage == SettingsPage.APP) {
                             settingsPage = SettingsPage.APP
                             settingsMessage = null
                         }
-                        SettingsNavButton("Документы", settingsPage == SettingsPage.DOCUMENTS) {
+                        SettingsNavButton(t("Документы", "Documents"), settingsPage == SettingsPage.DOCUMENTS) {
                             settingsPage = SettingsPage.DOCUMENTS
                             settingsMessage = null
                         }
@@ -461,14 +463,14 @@ fun HomeScreen(
 
                             when (settingsPage) {
                                 SettingsPage.SUBSCRIPTION -> {
-                                    Text("Подписка и тарифы", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                                    Text(t("Подписка и тарифы", "Subscription and plans"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                                     Spacer(Modifier.height(6.dp))
                                     Text(
                                         when {
-                                            subscription.trialPending -> "Пробный доступ готов · ${subscription.expiresLabel}"
-                                            subscription.unlimited -> "Активна · без ограничения по сроку · устройства: ${subscription.devicesLabel}"
-                                            subscription.active -> "Активна до ${subscription.expiresLabel} · осталось ${subscription.daysLeft} дн. · устройства: ${subscription.devicesLabel}"
-                                            else -> "Не активна · ${subscription.expiresLabel} · устройства: ${subscription.devicesLabel}"
+                                            subscription.trialPending -> t("Пробный доступ готов · ${subscription.expiresLabel}", "Trial access ready · ${subscription.expiresLabel}")
+                                            subscription.unlimited -> t("Активна · без ограничения по сроку · устройства: ${subscription.devicesLabel}", "Active · no expiration · devices: ${subscription.devicesLabel}")
+                                            subscription.active -> t("Активна до ${subscription.expiresLabel} · осталось ${subscription.daysLeft} дн. · устройства: ${subscription.devicesLabel}", "Active until ${subscription.expiresLabel} · ${subscription.daysLeft} days left · devices: ${subscription.devicesLabel}")
+                                            else -> t("Не активна · ${subscription.expiresLabel} · устройства: ${subscription.devicesLabel}", "Inactive · ${subscription.expiresLabel} · devices: ${subscription.devicesLabel}")
                                         },
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -478,10 +480,10 @@ fun HomeScreen(
                                         OutlinedButton(
                                             onClick = {
                                                 clipboard.setText(AnnotatedString(subscription.subscriptionUrl!!))
-                                                settingsMessage = "Ссылка подписки скопирована"
+                                                settingsMessage = t("Ссылка подписки скопирована", "Subscription link copied")
                                             },
                                             shape = RoundedCornerShape(14.dp)
-                                        ) { Text("Копировать ссылку подписки") }
+                                        ) { Text(t("Копировать ссылку подписки", "Copy subscription link")) }
                                     }
 
                                     if (subscription.trialAvailable) {
@@ -495,19 +497,19 @@ fun HomeScreen(
                                             if (trialLoading) {
                                                 CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
                                                 Spacer(Modifier.width(8.dp))
-                                                Text("Активируем…")
-                                            } else Text("Получить 3 дня бесплатно")
+                                                Text(t("Активируем…", "Activating…"))
+                                            } else Text(t("Получить 3 дня бесплатно", "Get 3 days free"))
                                         }
                                     }
 
                                     HorizontalDivider(Modifier.padding(vertical = 16.dp), color = MaterialTheme.colorScheme.outline)
-                                    Text("Тарифы", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                                    Text(t("Тарифы", "Plans"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                                     Spacer(Modifier.height(6.dp))
 
                                     if (subscription.unlimited) {
-                                        Text("У вас безлимитная подписка — продление не требуется.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text(t("У вас безлимитная подписка — продление не требуется.", "Your unlimited subscription does not require renewal."), color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     } else if (tariffs.isEmpty() && !managementLoading) {
-                                        Text("Доступных тарифов сейчас нет", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text(t("Доступных тарифов сейчас нет", "No plans are currently available"), color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     } else {
                                         tariffs.forEach { tariff ->
                                             Spacer(Modifier.height(8.dp))
@@ -522,7 +524,7 @@ fun HomeScreen(
 
                                     if (deviceProduct != null && subscription.devicesLimit > 0) {
                                         Spacer(Modifier.height(16.dp))
-                                        Text("Дополнительное устройство", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                                        Text(t("Дополнительное устройство", "Additional device"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                                         Spacer(Modifier.height(8.dp))
                                         OutlinedButton(
                                             onClick = { onPay(deviceProduct.code) },
@@ -533,37 +535,37 @@ fun HomeScreen(
                                             if (paymentLoadingProduct == deviceProduct.code) {
                                                 CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                                                 Spacer(Modifier.width(8.dp))
-                                                Text("Создаём платёж…")
+                                                Text(t("Создаём платёж…", "Creating payment…"))
                                             } else Text("+ ${deviceProduct.title} — ${deviceProduct.price} ₽")
                                         }
                                     }
 
                                     if (!paymentMessage.isNullOrBlank() || hasPendingPayment) {
                                         Spacer(Modifier.height(16.dp))
-                                        Text(paymentMessage ?: "Есть незавершённый платёж", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text(paymentMessage ?: t("Есть незавершённый платёж", "There is a pending payment"), color = MaterialTheme.colorScheme.onSurfaceVariant)
                                         Spacer(Modifier.height(8.dp))
                                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                             Button(onClick = onCheckPayment, enabled = !paymentChecking) {
-                                                Text(if (paymentChecking) "Проверяем…" else "Проверить оплату")
+                                                Text(if (paymentChecking) t("Проверяем…", "Checking…") else t("Проверить оплату", "Check payment"))
                                             }
-                                            TextButton(onClick = onDismissPendingPayment, enabled = !paymentChecking) { Text("Скрыть") }
+                                            TextButton(onClick = onDismissPendingPayment, enabled = !paymentChecking) { Text(t("Скрыть", "Hide")) }
                                         }
                                     }
                                 }
 
                                 SettingsPage.DEVICES -> {
-                                    Text("Устройства", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                                    Text(t("Устройства", "Devices"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                                     Spacer(Modifier.height(6.dp))
                                     Text(
-                                        if (subscription.devicesLimit <= 0) "Используется: ${subscription.devicesUsed}"
-                                        else "Используется: ${subscription.devicesUsed} из ${subscription.devicesLimit}",
+                                        if (subscription.devicesLimit <= 0) t("Используется: ${subscription.devicesUsed}", "In use: ${subscription.devicesUsed}")
+                                        else t("Используется: ${subscription.devicesUsed} из ${subscription.devicesLimit}", "In use: ${subscription.devicesUsed} of ${subscription.devicesLimit}"),
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                     Spacer(Modifier.height(12.dp))
 
                                     if (devices.isEmpty()) {
                                         Text(
-                                            if (managementLoading) "Загружаем устройства…" else "Устройства не найдены",
+                                            if (managementLoading) t("Загружаем устройства…", "Loading devices…") else t("Устройства не найдены", "No devices found"),
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     } else {
@@ -583,18 +585,18 @@ fun HomeScreen(
                                         enabled = !managementLoading,
                                         modifier = Modifier.fillMaxWidth().height(50.dp),
                                         shape = RoundedCornerShape(14.dp)
-                                    ) { Text(if (managementLoading) "Обновляем…" else "Обновить список") }
+                                    ) { Text(if (managementLoading) t("Обновляем…", "Refreshing…") else t("Обновить список", "Refresh list")) }
                                 }
 
                                 SettingsPage.APP -> {
-                                    Text("Приложение", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                                    Text(t("Приложение", "App"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
 
-                                    SettingsSectionTitle("Сервер")
-                                    SettingsInfoBox("Автовыбор · основной → запасной → резервный")
+                                    SettingsSectionTitle(t("Сервер", "Server"))
+                                    SettingsInfoBox(t("Автовыбор · основной → запасной → резервный", "Auto-select · primary → backup → fallback"))
 
-                                    SettingsSectionTitle("Тема")
-                                    ThemeChoice("Тёмная — чёрная", TrueWebThemeMode.DARK, themeMode, onThemeChanged)
-                                    ThemeChoice("Светлая — белая", TrueWebThemeMode.LIGHT, themeMode, onThemeChanged)
+                                    SettingsSectionTitle(t("Тема", "Theme"))
+                                    ThemeChoice(t("Тёмная — чёрная", "Dark — black"), TrueWebThemeMode.DARK, themeMode, onThemeChanged)
+                                    ThemeChoice(t("Светлая — белая", "Light — white"), TrueWebThemeMode.LIGHT, themeMode, onThemeChanged)
 
                                     SettingsSectionTitle("Android")
                                     OutlinedButton(
@@ -603,21 +605,21 @@ fun HomeScreen(
                                         modifier = Modifier.fillMaxWidth().height(50.dp),
                                         shape = RoundedCornerShape(14.dp)
                                     ) {
-                                        Text(if (batteryOptimizationRestricted) "🔋 Разрешить работу без ограничений" else "✓ Батарея: без ограничений")
+                                        Text(if (batteryOptimizationRestricted) t("🔋 Разрешить работу без ограничений", "🔋 Allow unrestricted battery use") else t("✓ Батарея: без ограничений", "✓ Battery: unrestricted"))
                                     }
 
-                                    SettingsSectionTitle("Данные")
+                                    SettingsSectionTitle(t("Данные", "Data"))
                                     OutlinedButton(
                                         onClick = onRefresh,
                                         enabled = !refreshing,
                                         modifier = Modifier.fillMaxWidth().height(50.dp),
                                         shape = RoundedCornerShape(14.dp)
-                                    ) { Text(if (refreshing) "Обновляем…" else "↻ Обновить данные") }
+                                    ) { Text(if (refreshing) t("Обновляем…", "Refreshing…") else t("↻ Обновить данные", "↻ Refresh data")) }
 
                                     SettingsSectionTitle("GeoData")
                                     val geoText = if (geoDataLastUpdatedMs > 0L) {
                                         SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()).format(Date(geoDataLastUpdatedMs))
-                                    } else "встроенная база"
+                                    } else t("встроенная база", "built-in database")
                                     Text("GeoData: $geoText", color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Spacer(Modifier.height(8.dp))
                                     OutlinedButton(
@@ -625,15 +627,15 @@ fun HomeScreen(
                                         enabled = !geoDataRefreshing,
                                         modifier = Modifier.fillMaxWidth().height(50.dp),
                                         shape = RoundedCornerShape(14.dp)
-                                    ) { Text(if (geoDataRefreshing) "Обновляем GeoData…" else "↻ Обновить GeoData сейчас") }
+                                    ) { Text(if (geoDataRefreshing) t("Обновляем GeoData…", "Updating GeoData…") else t("↻ Обновить GeoData сейчас", "↻ Update GeoData now")) }
                                     Spacer(Modifier.height(6.dp))
                                     Text(
-                                        "TrueWeb автоматически обновляет geoip.dat и geosite.dat. Если источник временно недоступен, VPN продолжит работать на последней локальной версии.",
+                                        t("TrueWeb автоматически обновляет geoip.dat и geosite.dat. Если источник временно недоступен, VPN продолжит работать на последней локальной версии.", "TrueWeb automatically updates geoip.dat and geosite.dat. If the source is temporarily unavailable, the VPN will keep using the latest local copy."),
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         style = MaterialTheme.typography.bodySmall
                                     )
 
-                                    SettingsSectionTitle("Диагностика")
+                                    SettingsSectionTitle(t("Диагностика", "Diagnostics"))
                                     OutlinedButton(
                                         onClick = {
                                             val stateLabel = when (vpnState) {
@@ -654,40 +656,40 @@ fun HomeScreen(
                                                 if (!vpnError.isNullOrBlank()) appendLine("VPN error: $vpnError")
                                             }
                                             clipboard.setText(AnnotatedString(text.trim()))
-                                            settingsMessage = "Диагностика скопирована"
+                                            settingsMessage = t("Диагностика скопирована", "Diagnostics copied")
                                         },
                                         modifier = Modifier.fillMaxWidth().height(50.dp),
                                         shape = RoundedCornerShape(14.dp)
-                                    ) { Text("Скопировать диагностику") }
+                                    ) { Text(t("Скопировать диагностику", "Copy diagnostics")) }
 
-                                    SettingsSectionTitle("Аккаунт")
+                                    SettingsSectionTitle(t("Аккаунт", "Account"))
                                     OutlinedButton(
                                         onClick = { showPasswordSetup = true },
                                         enabled = !accountActionLoading,
                                         modifier = Modifier.fillMaxWidth().height(50.dp),
                                         shape = RoundedCornerShape(14.dp)
-                                    ) { Text("Логин и пароль") }
+                                    ) { Text(t("Логин и пароль", "Username and password")) }
                                     if (showTelegramLink) {
                                         Spacer(Modifier.height(8.dp))
                                         OutlinedButton(
                                             onClick = { onLinkTelegram(); showSettings = false },
                                             modifier = Modifier.fillMaxWidth().height(50.dp),
                                             shape = RoundedCornerShape(14.dp)
-                                        ) { Text("Привязать Telegram") }
+                                        ) { Text(t("Привязать Telegram", "Link Telegram")) }
                                     }
                                     Spacer(Modifier.height(8.dp))
                                     TextButton(
                                         onClick = { onLogout(); showSettings = false },
                                         modifier = Modifier.fillMaxWidth().height(50.dp)
-                                    ) { Text("Выйти из аккаунта") }
+                                    ) { Text(t("Выйти из аккаунта", "Sign out")) }
                                 }
 
                                 SettingsPage.DOCUMENTS -> {
-                                    Text("Документы и помощь", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                                    Text(t("Документы и помощь", "Documents and help"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                                     Spacer(Modifier.height(6.dp))
-                                    Text("Документы TrueWeb и быстрые ссылки на связь.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(t("Документы TrueWeb и быстрые ссылки на связь.", "TrueWeb documents and quick support links."), color = MaterialTheme.colorScheme.onSurfaceVariant)
 
-                                    SettingsSectionTitle("Документы")
+                                    SettingsSectionTitle(t("Документы", "Documents"))
                                     SettingsWideButton(LegalDocuments.PRIVACY_TITLE) {
                                         legalTitle = LegalDocuments.PRIVACY_TITLE
                                         legalText = LegalDocuments.PRIVACY
@@ -710,17 +712,17 @@ fun HomeScreen(
                                     }
 
                                     Text(
-                                        "Версия ${BuildConfig.VERSION_NAME} · Оператор: ${LegalDocuments.OPERATOR}",
+                                        t("Версия ${BuildConfig.VERSION_NAME} · Оператор: ${LegalDocuments.OPERATOR}", "Version ${BuildConfig.VERSION_NAME} · Operator: ${LegalDocuments.OPERATOR}"),
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         style = MaterialTheme.typography.bodySmall,
                                         modifier = Modifier.padding(top = 10.dp)
                                     )
 
-                                    SettingsSectionTitle("Связаться")
-                                    SettingsWideButton("Группа TrueWeb в Telegram", onTelegramGroup)
-                                    SettingsWideButton("Поддержка TrueWeb", onSupport)
+                                    SettingsSectionTitle(t("Связаться", "Contact"))
+                                    SettingsWideButton(t("Группа TrueWeb в Telegram", "TrueWeb Telegram community"), onTelegramGroup)
+                                    SettingsWideButton(t("Поддержка TrueWeb", "TrueWeb support"), onSupport)
 
-                                    SettingsSectionTitle("Удаление аккаунта")
+                                    SettingsSectionTitle(t("Удаление аккаунта", "Account deletion"))
                                     Surface(
                                         modifier = Modifier.fillMaxWidth(),
                                         color = MaterialTheme.colorScheme.errorContainer,
@@ -729,10 +731,10 @@ fun HomeScreen(
                                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.45f))
                                     ) {
                                         Column(Modifier.padding(14.dp)) {
-                                            Text("Удаление аккаунта", fontWeight = FontWeight.SemiBold)
+                                            Text(t("Удаление аккаунта", "Account deletion"), fontWeight = FontWeight.SemiBold)
                                             Spacer(Modifier.height(4.dp))
                                             Text(
-                                                "Удаление необратимо. Перед удалением приложение попросит подтверждение.",
+                                                t("Удаление необратимо. Перед удалением приложение попросит подтверждение.", "Deletion is irreversible. The app will ask for confirmation first."),
                                                 style = MaterialTheme.typography.bodySmall
                                             )
                                             Spacer(Modifier.height(10.dp))
@@ -740,7 +742,7 @@ fun HomeScreen(
                                                 onClick = { showDeleteAccount = true },
                                                 enabled = !accountActionLoading,
                                                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                                            ) { Text("Удалить аккаунт") }
+                                            ) { Text(t("Удалить аккаунт", "Delete account")) }
                                         }
                                     }
                                 }
@@ -765,10 +767,10 @@ fun HomeScreen(
     settingsDeviceToDelete?.let { device ->
         AlertDialog(
             onDismissRequest = { settingsDeviceToDelete = null },
-            title = { Text("Удалить устройство?") },
+            title = { Text(t("Удалить устройство?", "Delete device?")) },
             text = {
                 Text(
-                    if (device.isCurrent) "Это текущее устройство. После удаления оно может зарегистрироваться снова при обновлении подключения."
+                    if (device.isCurrent) t("Это текущее устройство. После удаления оно может зарегистрироваться снова при обновлении подключения.", "This is the current device. After deletion, it may register again when the connection is refreshed.")
                     else "${device.title}\n\nПосле удаления освободится один слот."
                 )
             },
@@ -776,9 +778,9 @@ fun HomeScreen(
                 TextButton(onClick = {
                     settingsDeviceToDelete = null
                     onDeleteDevice(device.id)
-                }) { Text("Удалить", color = MaterialTheme.colorScheme.error) }
+                }) { Text(t("Удалить", "Delete"), color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { settingsDeviceToDelete = null }) { Text("Отмена") } }
+            dismissButton = { TextButton(onClick = { settingsDeviceToDelete = null }) { Text(t("Отмена", "Cancel")) } }
         )
     }
 
@@ -788,18 +790,18 @@ fun HomeScreen(
         var repeatPassword by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { if (!accountActionLoading) showPasswordSetup = false },
-            title = { Text("Логин и пароль") },
+            title = { Text(t("Логин и пароль", "Username and password")) },
             text = {
                 Column {
-                    Text("Задайте резервный способ входа. Пароль хранится на сервере только в виде стойкого хеша.", style = MaterialTheme.typography.bodySmall)
+                    Text(t("Задайте резервный способ входа. Пароль хранится на сервере только в виде стойкого хеша.", "Set a backup sign-in method. The password is stored on the server only as a secure hash."), style = MaterialTheme.typography.bodySmall)
                     Spacer(Modifier.height(10.dp))
-                    OutlinedTextField(value = login, onValueChange = { login = it.trim().take(64) }, singleLine = true, label = { Text("Логин") })
+                    OutlinedTextField(value = login, onValueChange = { login = it.trim().take(64) }, singleLine = true, label = { Text(t("Логин", "Username")) })
                     Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(value = password, onValueChange = { password = it.take(128) }, singleLine = true, label = { Text("Пароль") }, visualTransformation = PasswordVisualTransformation())
+                    OutlinedTextField(value = password, onValueChange = { password = it.take(128) }, singleLine = true, label = { Text(t("Пароль", "Password")) }, visualTransformation = PasswordVisualTransformation())
                     Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(value = repeatPassword, onValueChange = { repeatPassword = it.take(128) }, singleLine = true, label = { Text("Повторите пароль") }, visualTransformation = PasswordVisualTransformation())
+                    OutlinedTextField(value = repeatPassword, onValueChange = { repeatPassword = it.take(128) }, singleLine = true, label = { Text(t("Повторите пароль", "Repeat password")) }, visualTransformation = PasswordVisualTransformation())
                     if (password.isNotEmpty() && repeatPassword.isNotEmpty() && password != repeatPassword) {
-                        Text("Пароли не совпадают", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                        Text(t("Пароли не совпадают", "Passwords do not match"), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                     }
                 }
             },
@@ -807,25 +809,25 @@ fun HomeScreen(
                 Button(
                     onClick = { onSetPasswordCredentials(login, password); showPasswordSetup = false },
                     enabled = !accountActionLoading && login.length >= 3 && password.length >= 8 && password == repeatPassword
-                ) { Text("Сохранить") }
+                ) { Text(t("Сохранить", "Save")) }
             },
-            dismissButton = { TextButton(onClick = { showPasswordSetup = false }, enabled = !accountActionLoading) { Text("Отмена") } }
+            dismissButton = { TextButton(onClick = { showPasswordSetup = false }, enabled = !accountActionLoading) { Text(t("Отмена", "Cancel")) } }
         )
     }
 
     if (showDeleteAccount) {
         AlertDialog(
             onDismissRequest = { if (!accountActionLoading) showDeleteAccount = false },
-            title = { Text("Удалить аккаунт?") },
-            text = { Text("Удаление необратимо. Будут удалены аккаунт, VPN-доступ и все подписки. Оплаченные периоды после удаления восстановить невозможно, история оплат не используется для возврата удалённой подписки. Повторная регистрация также не обнулит пробный период и не выдаст новый триал.") },
+            title = { Text(t("Удалить аккаунт?", "Delete account?")) },
+            text = { Text(t("Удаление необратимо. Будут удалены аккаунт, VPN-доступ и все подписки. Оплаченные периоды после удаления восстановить невозможно, история оплат не используется для возврата удалённой подписки. Повторная регистрация также не обнулит пробный период и не выдаст новый триал.", "Deletion is irreversible. Your account, VPN access, and all subscriptions will be deleted. Paid periods cannot be restored after deletion, and payment history is not used to restore a deleted subscription. Registering again will not reset or grant a new trial.")) },
             confirmButton = {
                 Button(
                     onClick = { showDeleteAccount = false; onDeleteAccount() },
                     enabled = !accountActionLoading,
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) { Text("Удалить") }
+                ) { Text(t("Удалить", "Delete")) }
             },
-            dismissButton = { TextButton(onClick = { showDeleteAccount = false }, enabled = !accountActionLoading) { Text("Отмена") } }
+            dismissButton = { TextButton(onClick = { showDeleteAccount = false }, enabled = !accountActionLoading) { Text(t("Отмена", "Cancel")) } }
         )
     }
 
@@ -947,7 +949,7 @@ private fun SubscriptionManagementScreen(
                 }
                 Spacer(Modifier.width(4.dp))
                 Text(
-                    "Управление подпиской",
+                    t("Управление подпиской", "Manage subscription"),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
@@ -967,13 +969,13 @@ private fun SubscriptionManagementScreen(
 
             TrueWebCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(20.dp)) {
-                    Text("Подписка", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(t("Подписка", "Subscription"), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(6.dp))
                     Text(
                         when {
-                            subscription.trialPending -> "Пробный доступ готов"
-                            subscription.active -> "Активна"
-                            else -> "Не активна"
+                            subscription.trialPending -> t("Пробный доступ готов", "Trial access ready")
+                            subscription.active -> t("Активна", "Active")
+                            else -> t("Не активна", "Inactive")
                         },
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
@@ -983,15 +985,15 @@ private fun SubscriptionManagementScreen(
                     Text(
                         when {
                             subscription.trialPending -> subscription.expiresLabel
-                            subscription.unlimited -> "Без ограничения по сроку"
-                            subscription.active -> "Действует до ${subscription.expiresLabel}"
+                            subscription.unlimited -> t("Без ограничения по сроку", "No expiration")
+                            subscription.active -> t("Действует до ${subscription.expiresLabel}", "Valid until ${subscription.expiresLabel}")
                             else -> subscription.expiresLabel
                         },
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     if (subscription.active && !subscription.unlimited) {
                         Spacer(Modifier.height(4.dp))
-                        Text("Осталось ${subscription.daysLeft} дн.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(t("Осталось ${subscription.daysLeft} дн.", "${subscription.daysLeft} days left"), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -1001,14 +1003,14 @@ private fun SubscriptionManagementScreen(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 TrueWebCard(Modifier.weight(1f)) {
                     Column(Modifier.padding(18.dp)) {
-                        Text("Трафик", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
+                        Text(t("Трафик", "Traffic"), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
                         Spacer(Modifier.height(6.dp))
                         Text(subscription.trafficUsed, fontWeight = FontWeight.Bold, fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurface)
                     }
                 }
                 TrueWebCard(Modifier.weight(1f)) {
                     Column(Modifier.padding(18.dp)) {
-                        Text("Устройства", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
+                        Text(t("Устройства", "Devices"), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
                         Spacer(Modifier.height(6.dp))
                         Text(subscription.devicesLabel, fontWeight = FontWeight.Bold, fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurface)
                     }
@@ -1024,25 +1026,25 @@ private fun SubscriptionManagementScreen(
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     if (trialLoading) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
-                    else Text("Получить 3 дня бесплатно", fontWeight = FontWeight.SemiBold)
+                    else Text(t("Получить 3 дня бесплатно", "Get 3 days free"), fontWeight = FontWeight.SemiBold)
                 }
             }
 
             Spacer(Modifier.height(16.dp))
-            Text("Продление и оплата", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(t("Продление и оплата", "Renewal and payment"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(8.dp))
 
             if (subscription.unlimited) {
                 TrueWebCard(Modifier.fillMaxWidth()) {
                     Text(
-                        "У вас безлимитная подписка — продление не требуется.",
+                        t("У вас безлимитная подписка — продление не требуется.", "Your unlimited subscription does not require renewal."),
                         modifier = Modifier.padding(18.dp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             } else if (tariffs.isEmpty() && !loading) {
                 TrueWebCard(Modifier.fillMaxWidth()) {
-                    Text("Тарифы пока не загружены", modifier = Modifier.padding(18.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(t("Тарифы пока не загружены", "Plans have not loaded yet"), modifier = Modifier.padding(18.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             } else {
                 tariffs.forEach { tariff ->
@@ -1060,7 +1062,7 @@ private fun SubscriptionManagementScreen(
                 Spacer(Modifier.height(12.dp))
                 TrueWebCard(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(18.dp)) {
-                        Text(paymentMessage ?: "Есть незавершённый платёж", color = MaterialTheme.colorScheme.onSurface)
+                        Text(paymentMessage ?: t("Есть незавершённый платёж", "There is a pending payment"), color = MaterialTheme.colorScheme.onSurface)
                         Spacer(Modifier.height(10.dp))
                         OutlinedButton(
                             onClick = onCheckPayment,
@@ -1070,15 +1072,15 @@ private fun SubscriptionManagementScreen(
                             if (paymentChecking) {
                                 CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                                 Spacer(Modifier.width(8.dp))
-                                Text("Проверяем…")
-                            } else Text("Проверить оплату")
+                                Text(t("Проверяем…", "Checking…"))
+                            } else Text(t("Проверить оплату", "Check payment"))
                         }
                         TextButton(
                             onClick = onDismissPendingPayment,
                             enabled = !paymentChecking,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Скрыть платёж", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(t("Скрыть платёж", "Hide payment"), color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
@@ -1086,7 +1088,7 @@ private fun SubscriptionManagementScreen(
 
             Spacer(Modifier.height(20.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Устройства", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(t("Устройства", "Devices"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.weight(1f))
                 Text(subscription.devicesLabel, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -1095,7 +1097,7 @@ private fun SubscriptionManagementScreen(
             if (devices.isEmpty()) {
                 TrueWebCard(Modifier.fillMaxWidth()) {
                     Text(
-                        if (loading) "Загружаем устройства…" else "Зарегистрированных устройств нет",
+                        if (loading) t("Загружаем устройства…", "Loading devices…") else t("Зарегистрированных устройств нет", "No registered devices"),
                         modifier = Modifier.padding(18.dp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1118,9 +1120,9 @@ private fun SubscriptionManagementScreen(
                     if (paymentLoadingProduct == deviceProduct.code) {
                         CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                         Spacer(Modifier.width(8.dp))
-                        Text("Создаём платёж…")
+                        Text(t("Создаём платёж…", "Creating payment…"))
                     } else {
-                        Text("+ Доп. устройство — ${deviceProduct.price} ₽", fontWeight = FontWeight.SemiBold)
+                        Text(t("+ Доп. устройство — ${deviceProduct.price} ₽", "+ Extra device — ${deviceProduct.price} RUB"), fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -1131,7 +1133,7 @@ private fun SubscriptionManagementScreen(
                 enabled = !refreshing && !loading,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = RoundedCornerShape(16.dp)
-            ) { Text(if (refreshing || loading) "Обновляем…" else "Обновить данные") }
+            ) { Text(if (refreshing || loading) t("Обновляем…", "Refreshing…") else t("Обновить данные", "Refresh data")) }
 
             Spacer(Modifier.height(24.dp))
         }
@@ -1140,10 +1142,10 @@ private fun SubscriptionManagementScreen(
     deviceToDelete?.let { device ->
         AlertDialog(
             onDismissRequest = { deviceToDelete = null },
-            title = { Text("Удалить устройство?") },
+            title = { Text(t("Удалить устройство?", "Delete device?")) },
             text = {
                 Text(
-                    if (device.isCurrent) "Это текущее устройство. После удаления оно может зарегистрироваться снова при обновлении подключения."
+                    if (device.isCurrent) t("Это текущее устройство. После удаления оно может зарегистрироваться снова при обновлении подключения.", "This is the current device. After deletion, it may register again when the connection is refreshed.")
                     else "${device.title}\n\nПосле удаления освободится один слот."
                 )
             },
@@ -1151,9 +1153,9 @@ private fun SubscriptionManagementScreen(
                 TextButton(onClick = {
                     deviceToDelete = null
                     onDeleteDevice(device.id)
-                }) { Text("Удалить", color = MaterialTheme.colorScheme.error) }
+                }) { Text(t("Удалить", "Delete"), color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { deviceToDelete = null }) { Text("Отмена") } }
+            dismissButton = { TextButton(onClick = { deviceToDelete = null }) { Text(t("Отмена", "Cancel")) } }
         )
     }
 }
@@ -1169,7 +1171,7 @@ private fun TariffButton(tariff: TariffOption, loading: Boolean, enabled: Boolea
         if (loading) {
             CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
             Spacer(Modifier.width(8.dp))
-            Text("Создаём платёж…")
+            Text(t("Создаём платёж…", "Creating payment…"))
         } else {
             Text(tariff.title, modifier = Modifier.weight(1f), textAlign = TextAlign.Start, fontWeight = FontWeight.SemiBold)
             if (tariff.badge.isNotBlank()) {
@@ -1192,7 +1194,7 @@ private fun DeviceRow(device: DeviceItem, enabled: Boolean, onDelete: () -> Unit
                     Text(device.title, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
                     if (device.isCurrent) {
                         Spacer(Modifier.width(8.dp))
-                        Text("это устройство", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall)
+                        Text(t("это устройство", "this device"), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall)
                     }
                 }
                 if (device.details.isNotBlank()) {
@@ -1201,11 +1203,11 @@ private fun DeviceRow(device: DeviceItem, enabled: Boolean, onDelete: () -> Unit
                 }
                 if (device.lastSeenMs > 0L) {
                     Spacer(Modifier.height(2.dp))
-                    Text("Был онлайн: ${formatDeviceTime(device.lastSeenMs)}", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
+                    Text(t("Был онлайн: ${formatDeviceTime(device.lastSeenMs)}", "Last online: ${formatDeviceTime(device.lastSeenMs)}"), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
                 }
             }
             TextButton(onClick = onDelete, enabled = enabled) {
-                Text("Удалить", color = MaterialTheme.colorScheme.error)
+                Text(t("Удалить", "Delete"), color = MaterialTheme.colorScheme.error)
             }
         }
     }
@@ -1239,27 +1241,27 @@ private fun SubscriptionSummaryCard(info: SubscriptionInfo, onManage: () -> Unit
         Column(Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column {
-                    Text("Подписка", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
+                    Text(t("Подписка", "Subscription"), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
                     Text(
                         when {
-                            info.trialPending -> "Пробный доступ готов"
-                            info.active -> "Активна"
-                            else -> "Не активна"
+                            info.trialPending -> t("Пробный доступ готов", "Trial access ready")
+                            info.active -> t("Активна", "Active")
+                            else -> t("Не активна", "Inactive")
                         },
                         fontWeight = FontWeight.Bold,
                         color = if (info.active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                     )
                 }
                 Spacer(Modifier.weight(1f))
-                if (info.active && !info.unlimited) Text("${info.daysLeft} дн.", fontWeight = FontWeight.SemiBold)
+                if (info.active && !info.unlimited) Text(t("${info.daysLeft} дн.", "${info.daysLeft} days"), fontWeight = FontWeight.SemiBold)
             }
 
             Spacer(Modifier.height(10.dp))
             Text(
                 when {
                     info.trialPending -> info.expiresLabel
-                    info.unlimited -> "Без ограничения по сроку"
-                    info.active -> "до ${info.expiresLabel}"
+                    info.unlimited -> t("Без ограничения по сроку", "No expiration")
+                    info.active -> t("до ${info.expiresLabel}", "until ${info.expiresLabel}")
                     else -> info.expiresLabel
                 },
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1270,8 +1272,8 @@ private fun SubscriptionSummaryCard(info: SubscriptionInfo, onManage: () -> Unit
             Spacer(Modifier.height(16.dp))
 
             Row(Modifier.fillMaxWidth()) {
-                Metric("Трафик", info.trafficUsed, Modifier.weight(1f))
-                Metric("Устройства", info.devicesLabel, Modifier.weight(1f))
+                Metric(t("Трафик", "Traffic"), info.trafficUsed, Modifier.weight(1f))
+                Metric(t("Устройства", "Devices"), info.devicesLabel, Modifier.weight(1f))
             }
 
             Spacer(Modifier.height(18.dp))
@@ -1279,7 +1281,7 @@ private fun SubscriptionSummaryCard(info: SubscriptionInfo, onManage: () -> Unit
                 onClick = onManage,
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = RoundedCornerShape(16.dp)
-            ) { Text("Управление подпиской", fontWeight = FontWeight.SemiBold) }
+            ) { Text(t("Управление подпиской", "Manage subscription"), fontWeight = FontWeight.SemiBold) }
         }
     }
 }
