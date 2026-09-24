@@ -1171,7 +1171,7 @@ class MainActivity : ComponentActivity() {
 
                 MessageDigest.getInstance("SHA-256")
                     .digest(bytes)
-                    .joinToString(":") { "%02X".format(it) }
+                    .joinToString(":") { "%02X".format(it.toInt() and 0xFF) }
             }.getOrElse { "unavailable: ${it.javaClass.simpleName}" }
         }
 
