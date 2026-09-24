@@ -689,7 +689,8 @@ fun HomeScreen(
                                         enabled = !accountActionLoading,
                                         modifier = Modifier.fillMaxWidth().height(50.dp),
                                         shape = RoundedCornerShape(14.dp)
-                                    ) { Text(t("Логин и пароль", "Username and password")) }                                    Spacer(Modifier.height(8.dp))
+                                    ) { Text(t("Логин и пароль", "Username and password")) }
+                                    Spacer(Modifier.height(8.dp))
                                     TextButton(
                                         onClick = { onLogout(); showSettings = false },
                                         modifier = Modifier.fillMaxWidth().height(50.dp)
