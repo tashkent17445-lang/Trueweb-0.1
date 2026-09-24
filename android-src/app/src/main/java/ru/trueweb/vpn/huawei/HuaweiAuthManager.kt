@@ -4,7 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import com.huawei.hms.support.account.request.AccountAuthParams
 import com.huawei.hms.support.account.request.AccountAuthParamsHelper
-import com.huawei.hms.support.account.service.AccountAuthManager
+import com.huawei.hms.support.account.AccountAuthManager
 
 object HuaweiAuthManager {
     fun signInIntent(activity: Activity): Intent {
