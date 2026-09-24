@@ -942,6 +942,7 @@ private fun SubscriptionManagementScreen(
     paymentLoadingProduct: String?,
     paymentChecking: Boolean,
     paymentMessage: String?,
+    paymentPriceLabels: Map<String, String> = emptyMap(),
     hasPendingPayment: Boolean,
     onBack: () -> Unit,
     onRefresh: () -> Unit,
