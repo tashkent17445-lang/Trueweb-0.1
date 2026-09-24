@@ -8,6 +8,7 @@ import com.huawei.hms.iap.IapClient
 import com.huawei.hms.iap.entity.ConsumeOwnedPurchaseReq
 import com.huawei.hms.iap.entity.InAppPurchaseData
 import com.huawei.hms.iap.entity.OrderStatusCode
+import com.huawei.hms.iap.entity.OwnedPurchasesReq
 import com.huawei.hms.iap.entity.ProductInfoReq
 import com.huawei.hms.iap.entity.PurchaseIntentReq
 
@@ -108,6 +109,43 @@ object HuaweiIapManager {
             OrderStatusCode.ORDER_PRODUCT_OWNED -> error("PRODUCT_OWNED")
             else -> error("Huawei IAP failed: ${result.returnCode}")
         }
+    }
+
+    fun loadUnconsumedPurchases(
+        activity: Activity,
+        onSuccess: (List<PurchaseReceipt>) -> Unit,
+        onFailure: (Throwable) -> Unit
+    ) {
+        val request = OwnedPurchasesReq().apply {
+            priceType = IapClient.PriceType.IN_APP_CONSUMABLE
+        }
+        Iap.getIapClient(activity)
+            .obtainOwnedPurchases(request)
+            .addOnSuccessListener { result ->
+                val dataList = result.inAppPurchaseDataList.orEmpty()
+                val signatures = result.inAppSignature.orEmpty()
+                val receipts = buildList {
+                    dataList.forEachIndexed { index, purchaseData ->
+                        val signature = signatures.getOrNull(index).orEmpty()
+                        if (signature.isBlank()) return@forEachIndexed
+                        runCatching {
+                            val parsed = InAppPurchaseData(purchaseData)
+                            if (parsed.productId == PRODUCT_30_DAYS || parsed.productId == PRODUCT_EXTRA_DEVICE_30_DAYS) {
+                                add(
+                                    PurchaseReceipt(
+                                        purchaseData = purchaseData,
+                                        signature = signature,
+                                        productId = parsed.productId,
+                                        purchaseToken = parsed.purchaseToken
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+                onSuccess(receipts)
+            }
+            .addOnFailureListener(onFailure)
     }
 
     fun consume(
