@@ -164,6 +164,33 @@ object TrueWebApi {
         ).getString("access_token")
     }
 
+    /**
+     * Resolve the backend Telegram auth start endpoint to the actual Telegram OAuth URL.
+     * The API lives on :8443, but that internal bridge URL should not be opened in a browser:
+     * while the VPN is active some devices can time out on the bridge itself. The app requests
+     * the 302 itself and opens only oauth.telegram.org externally.
+     */
+    fun telegramAuthUrl(): Result<String> = runCatching {
+        val conn = (URL(AppConfig.TELEGRAM_AUTH_START).openConnection() as HttpURLConnection).apply {
+            requestMethod = "GET"
+            instanceFollowRedirects = false
+            connectTimeout = 15_000
+            readTimeout = 15_000
+            setRequestProperty("Accept", "text/html,application/xhtml+xml,application/json")
+            setRequestProperty("User-Agent", "TrueWeb-Android/${BuildConfig.VERSION_NAME}")
+        }
+        try {
+            val status = conn.responseCode
+            val location = conn.getHeaderField("Location")?.trim()
+            if (status !in setOf(301, 302, 303, 307, 308) || location.isNullOrBlank()) {
+                throw IllegalStateException("Telegram auth start returned HTTP $status without redirect")
+            }
+            location
+        } finally {
+            conn.disconnect()
+        }
+    }
+
     fun me(accessToken: String): Result<SubscriptionInfo> = runCatching {
         SubscriptionInfo.fromApi(request("GET", "/me", accessToken = accessToken))
     }
