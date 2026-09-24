@@ -224,8 +224,14 @@ fun HomeScreen(
                             Text(t("Привязать Telegram", "Link Telegram"), fontWeight = FontWeight.SemiBold)
                             Text(
                                 if (vpnState == TrueWebVpnService.TunnelState.RUNNING)
-                                    t("VPN уже работает — теперь Telegram откроется.", "VPN is already connected — Telegram will open now.")
-                                else t("Сначала включите VPN, затем привяжите старый аккаунт.", "Connect the VPN first, then link your existing account."),
+                                    t(
+                                        "Привяжите Telegram — в группе TrueWeb можно получать бонусы и промокоды.",
+                                        "Link Telegram to receive bonuses and promo codes in the TrueWeb community."
+                                    )
+                                else t(
+                                    "Привяжите Telegram — в группе TrueWeb можно получать бонусы и промокоды. Сначала включите VPN.",
+                                    "Link Telegram to receive bonuses and promo codes in the TrueWeb community. Connect the VPN first."
+                                ),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.bodySmall
                             )
@@ -480,17 +486,6 @@ fun HomeScreen(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
 
-                                    if (!subscription.subscriptionUrl.isNullOrBlank()) {
-                                        Spacer(Modifier.height(14.dp))
-                                        OutlinedButton(
-                                            onClick = {
-                                                clipboard.setText(AnnotatedString(subscription.subscriptionUrl!!))
-                                                settingsMessage = t("Ссылка подписки скопирована", "Subscription link copied")
-                                            },
-                                            shape = RoundedCornerShape(14.dp)
-                                        ) { Text(t("Копировать ссылку подписки", "Copy subscription link")) }
-                                    }
-
                                     if (subscription.trialAvailable) {
                                         Spacer(Modifier.height(12.dp))
                                         Button(
@@ -694,16 +689,7 @@ fun HomeScreen(
                                         enabled = !accountActionLoading,
                                         modifier = Modifier.fillMaxWidth().height(50.dp),
                                         shape = RoundedCornerShape(14.dp)
-                                    ) { Text(t("Логин и пароль", "Username and password")) }
-                                    if (showTelegramLink) {
-                                        Spacer(Modifier.height(8.dp))
-                                        OutlinedButton(
-                                            onClick = { onLinkTelegram(); showSettings = false },
-                                            modifier = Modifier.fillMaxWidth().height(50.dp),
-                                            shape = RoundedCornerShape(14.dp)
-                                        ) { Text(t("Привязать Telegram", "Link Telegram")) }
-                                    }
-                                    Spacer(Modifier.height(8.dp))
+                                    ) { Text(t("Логин и пароль", "Username and password")) }                                    Spacer(Modifier.height(8.dp))
                                     TextButton(
                                         onClick = { onLogout(); showSettings = false },
                                         modifier = Modifier.fillMaxWidth().height(50.dp)
