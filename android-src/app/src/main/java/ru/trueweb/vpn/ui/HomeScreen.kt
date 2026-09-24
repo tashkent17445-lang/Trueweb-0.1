@@ -208,45 +208,6 @@ fun HomeScreen(
                 )
             }
 
-            if (showTelegramLink) {
-                Spacer(Modifier.height(8.dp))
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text(t("Привязать Telegram", "Link Telegram"), fontWeight = FontWeight.SemiBold)
-                            Text(
-                                if (vpnState == TrueWebVpnService.TunnelState.RUNNING)
-                                    t(
-                                        "Привяжите Telegram — в группе TrueWeb можно получать бонусы и промокоды.",
-                                        "Link Telegram to receive bonuses and promo codes in the TrueWeb community."
-                                    )
-                                else t(
-                                    "Привяжите Telegram — в группе TrueWeb можно получать бонусы и промокоды. Сначала включите VPN.",
-                                    "Link Telegram to receive bonuses and promo codes in the TrueWeb community. Connect the VPN first."
-                                ),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                        Spacer(Modifier.width(10.dp))
-                        Button(
-                            onClick = onLinkTelegram,
-                            enabled = vpnState == TrueWebVpnService.TunnelState.RUNNING,
-                            shape = RoundedCornerShape(14.dp)
-                        ) { Text(t("Привязать", "Link")) }
-                    }
-                }
-            }
-
-
             if (showBatteryOptimizationNotice) {
                 Spacer(Modifier.height(8.dp))
                 Surface(
@@ -485,6 +446,43 @@ fun HomeScreen(
                                         },
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
+
+                                    if (showTelegramLink) {
+                                        Spacer(Modifier.height(14.dp))
+                                        Surface(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            shape = RoundedCornerShape(16.dp),
+                                            color = MaterialTheme.colorScheme.surfaceVariant,
+                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                                        ) {
+                                            Column(Modifier.padding(14.dp)) {
+                                                Text(t("Привязать Telegram", "Link Telegram"), fontWeight = FontWeight.SemiBold)
+                                                Spacer(Modifier.height(4.dp))
+                                                Text(
+                                                    if (vpnState == TrueWebVpnService.TunnelState.RUNNING)
+                                                        t(
+                                                            "Привяжите Telegram к этому аккаунту TrueWeb.",
+                                                            "Link Telegram to this TrueWeb account."
+                                                        )
+                                                    else t(
+                                                        "Для привязки Telegram сначала включите VPN.",
+                                                        "Connect the VPN before linking Telegram."
+                                                    ),
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    style = MaterialTheme.typography.bodySmall
+                                                )
+                                                Spacer(Modifier.height(10.dp))
+                                                Button(
+                                                    onClick = onLinkTelegram,
+                                                    enabled = vpnState == TrueWebVpnService.TunnelState.RUNNING,
+                                                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                                                    shape = RoundedCornerShape(14.dp)
+                                                ) {
+                                                    Text(t("Привязать Telegram", "Link Telegram"))
+                                                }
+                                            }
+                                        }
+                                    }
 
                                     if (subscription.trialAvailable) {
                                         Spacer(Modifier.height(12.dp))
