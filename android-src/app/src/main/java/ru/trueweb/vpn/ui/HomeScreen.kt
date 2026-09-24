@@ -1079,6 +1079,7 @@ private fun SubscriptionManagementScreen(
                         tariff = tariff,
                         loading = paymentLoadingProduct == tariff.code,
                         enabled = paymentLoadingProduct == null && !paymentChecking,
+                        priceLabel = paymentPriceLabels[tariff.code],
                         onClick = { onPay(tariff.code) }
                     )
                 }
