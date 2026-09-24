@@ -1,5 +1,6 @@
 package ru.trueweb.vpn.vpn
 
+import ru.trueweb.vpn.i18n.L10n
 import ru.trueweb.vpn.i18n.L10n.t
 
 import android.app.Notification
@@ -78,7 +79,6 @@ class TrueWebVpnService : VpnService() {
         private const val WL_RECOVERY_MAX_SECONDS = 211L
         private const val STABLE_PROBE_COUNT = 3
         private const val STABLE_PROBE_GAP_MS = 4000L
-        private val USER_ERROR_MESSAGE = t("Что-то пошло не так. Отчёт об ошибке уже отправлен разработчику. Попробуйте подключиться немного позже.", "Something went wrong. An error report has been sent to the developer. Please try connecting again later.")
 
         private val _state = MutableStateFlow(TunnelState.STOPPED)
         val state: StateFlow<TunnelState> = _state
@@ -207,6 +207,7 @@ class TrueWebVpnService : VpnService() {
 
     override fun onCreate() {
         super.onCreate()
+        L10n.initialize(this)
         createChannel()
         initializeCore()
         registerPhysicalNetworkCallback()
@@ -410,7 +411,7 @@ class TrueWebVpnService : VpnService() {
                 else scheduleNormalHealth()
             } catch (e: Throwable) {
                 reportUnexpectedError("vpn_start", e)
-                _lastError.value = USER_ERROR_MESSAGE
+                _lastError.value = userErrorMessage()
                 _state.value = TunnelState.ERROR
                 updateNotification(t("Ошибка подключения. Отчёт отправлен разработчику", "Connection error. A report was sent to the developer"))
                 stopCoreOnly()
@@ -422,6 +423,12 @@ class TrueWebVpnService : VpnService() {
             }
         }.start()
     }
+
+    private fun userErrorMessage(): String =
+        t(
+            "Что-то пошло не так. Отчёт об ошибке уже отправлен разработчику. Попробуйте подключиться немного позже.",
+            "Something went wrong. An error report has been sent to the developer. Please try connecting again later."
+        )
 
     private fun chooseNormalServer(): VpnServer? {
         val primary = store.primaryServer()
@@ -500,7 +507,7 @@ class TrueWebVpnService : VpnService() {
         stopCoreOnly()
         store.activeRole = VpnRole.UNKNOWN
         _activeRole.value = VpnRole.UNKNOWN
-        _lastError.value = USER_ERROR_MESSAGE
+        _lastError.value = userErrorMessage()
         _state.value = TunnelState.ERROR
         _whitelistSuggested.value = false
         updateNotification(t("Не удалось подключиться. Повторяем попытку…", "Could not connect. Retrying…"))
