@@ -59,7 +59,7 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.11.2")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 
-    implementation("com.huawei.hms:hwid:6.13.0.300")
+    implementation("com.huawei.hms:hwid:6.12.0.300")
     implementation("com.huawei.hms:iap:6.16.6.305")
 
     val composeBom = platform("androidx.compose:compose-bom:2026.08.00")
