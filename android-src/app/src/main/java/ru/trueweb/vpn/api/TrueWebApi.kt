@@ -1,5 +1,7 @@
 package ru.trueweb.vpn.api
 
+import ru.trueweb.vpn.i18n.L10n.t
+
 import org.json.JSONObject
 import ru.trueweb.vpn.AppConfig
 import ru.trueweb.vpn.BuildConfig
@@ -215,7 +217,7 @@ object TrueWebApi {
             id = root.getString("payment_id"),
             confirmationUrl = root.getString("confirmation_url"),
             product = root.optString("product", product),
-            title = root.optString("title", "Оплата TrueWeb"),
+            title = root.optString("title", t("Оплата TrueWeb", "TrueWeb payment")),
             price = root.optInt("price", 0)
         )
     }
