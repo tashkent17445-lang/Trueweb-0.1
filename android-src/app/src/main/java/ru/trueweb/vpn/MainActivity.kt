@@ -27,6 +27,8 @@ import androidx.core.view.WindowCompat
 import ru.trueweb.vpn.api.TrueWebApi
 import ru.trueweb.vpn.auth.AuthBackend
 import ru.trueweb.vpn.auth.SessionStore
+import ru.trueweb.vpn.huawei.HuaweiAuthManager
+import ru.trueweb.vpn.huawei.HuaweiIapManager
 import ru.trueweb.vpn.model.*
 import ru.trueweb.vpn.store.DeviceIdentity
 import ru.trueweb.vpn.store.GeoDataManager
@@ -74,6 +76,7 @@ class MainActivity : ComponentActivity() {
 
     private var tariffs by mutableStateOf<List<TariffOption>>(emptyList())
     private var deviceProduct by mutableStateOf<DeviceProduct?>(null)
+    private var huaweiProducts by mutableStateOf<Map<String, HuaweiIapManager.Product>>(emptyMap())
     private var devices by mutableStateOf<List<DeviceItem>>(emptyList())
     private var managementLoading by mutableStateOf(false)
     private var managementError by mutableStateOf<String?>(null)
@@ -86,6 +89,11 @@ class MainActivity : ComponentActivity() {
     private var batteryNoticeDismissed by mutableStateOf(false)
     private var geoDataLastUpdatedMs by mutableLongStateOf(0L)
     private var geoDataRefreshing by mutableStateOf(false)
+
+    private val huaweiAuthLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            handleHuaweiAuthResult(result.data)
+        }
 
     private val vpnPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -162,6 +170,7 @@ class MainActivity : ComponentActivity() {
                         themeMode = themeMode,
                         emailCodeSentTo = emailCodeSentTo,
                         onProxyClick = { openExternal(AppConfig.TELEGRAM_PROXY_URL) },
+                        onHuaweiLoginClick = { beginHuaweiLogin() },
                         onTelegramLoginClick = {
                             authError = null
                             sessionStore.telegramLinkPending = false
@@ -198,7 +207,8 @@ class MainActivity : ComponentActivity() {
                             paymentLoadingProduct = paymentLoadingProduct,
                             paymentChecking = paymentChecking,
                             paymentMessage = paymentMessage,
-                            hasPendingPayment = pendingPaymentStore.paymentId != null,
+                            paymentPriceLabels = huaweiPriceLabels(),
+                            hasPendingPayment = false,
                             accountActionLoading = accountActionLoading,
                             accountActionMessage = accountActionMessage,
                             batteryOptimizationRestricted = batteryOptimizationRestricted,
@@ -236,7 +246,15 @@ class MainActivity : ComponentActivity() {
         if (authenticated) {
             SubscriptionRefreshWorker.schedule(this)
             loadData(forceServers = serverStore.isStale() || !serverStore.hasRequiredNormalServers())
-            if (pendingPaymentStore.paymentId != null) checkPendingPayment(poll = false)
+            pendingPaymentStore.clear()
+        }
+    }
+
+    @Deprecated("Huawei IAP still returns the checkout result through onActivityResult")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == HuaweiIapManager.REQUEST_CODE_BUY) {
+            handleHuaweiPurchaseResult(data)
         }
     }
 
@@ -249,9 +267,7 @@ class MainActivity : ComponentActivity() {
             servers = serverStore.loadServers()
             loadData(forceServers = serverStore.isStale() || !serverStore.hasRequiredNormalServers())
             if (serverStore.desiredRunning) TrueWebVpnService.foregroundCheck(this)
-            if (this::pendingPaymentStore.isInitialized && pendingPaymentStore.paymentId != null && !paymentChecking) {
-                checkPendingPayment(poll = false)
-            }
+            if (!paymentChecking) recoverHuaweiPurchases()
         }
     }
 
@@ -335,6 +351,63 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }.start()
+    }
+
+    private fun beginHuaweiLogin() {
+        if (authInProgress) return
+        authInProgress = true
+        authError = null
+        runCatching {
+            huaweiAuthLauncher.launch(HuaweiAuthManager.signInIntent(this))
+        }.onFailure {
+            authInProgress = false
+            authError = t(
+                "Не удалось открыть вход HUAWEI ID: ${cleanError(it)}",
+                "Could not open HUAWEI ID sign-in: ${cleanError(it)}"
+            )
+        }
+    }
+
+    private fun handleHuaweiAuthResult(data: Intent?) {
+        val authCode = HuaweiAuthManager.parseAuthorizationCode(data)
+        authCode.onFailure {
+            authInProgress = false
+            authError = t(
+                "Не удалось войти с HUAWEI ID: ${cleanError(it)}",
+                "Could not sign in with HUAWEI ID: ${cleanError(it)}"
+            )
+        }.onSuccess { code ->
+            Thread {
+                val result = TrueWebApi.huaweiLogin(code)
+                runOnUiThread {
+                    authInProgress = false
+                    result.onSuccess { auth ->
+                        sessionStore.accessToken = auth.accessToken
+                        sessionStore.authMethod = "huawei"
+                        sessionStore.needsTelegramLink = auth.needsTelegramLink
+                        sessionStore.telegramLinkPending = false
+                        emailCodeSentTo = null
+                        authenticated = true
+                        subscription = null
+                        SubscriptionRefreshWorker.schedule(this)
+                        if (auth.isNew && auth.trialActivated) {
+                            Toast.makeText(
+                                this,
+                                t("Аккаунт TrueWeb создан. Пробный доступ уже активирован.", "Your TrueWeb account has been created. Trial access is already active."),
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                        loadData(forceServers = true)
+                        loadManagementData()
+                    }.onFailure {
+                        authError = t(
+                            "Не удалось завершить вход HUAWEI ID: ${cleanError(it)}",
+                            "Could not complete HUAWEI ID sign-in: ${cleanError(it)}"
+                        )
+                    }
+                }
+            }.start()
+        }
     }
 
     private fun startEmailAuth(rawEmail: String) {
@@ -503,6 +576,8 @@ class MainActivity : ComponentActivity() {
                 billing.onSuccess {
                     tariffs = it.tariffs
                     deviceProduct = it.deviceProduct
+                    loadHuaweiProducts()
+                    recoverHuaweiPurchases()
                 }.onFailure {
                     managementError = unexpectedOrExpectedMessage("billing_catalog", it, t("Не удалось загрузить тарифы", "Could not load plans"))
                 }
@@ -538,22 +613,161 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun startPayment(product: String) {
-        if (paymentLoadingProduct != null) return
-        val token = sessionStore.accessToken ?: return
+        if (paymentLoadingProduct != null || paymentChecking) return
+        if (sessionStore.accessToken.isNullOrBlank()) return
+
+        val huaweiProductId = huaweiProductIdFor(product)
+        if (huaweiProductId == null) {
+            managementError = t(
+                "Этот тариф пока не настроен для оплаты через AppGallery.",
+                "This plan is not configured for AppGallery billing yet."
+            )
+            return
+        }
+
         paymentLoadingProduct = product
         paymentMessage = null
         managementError = null
 
-        Thread {
-            val result = TrueWebApi.createPayment(token, product)
-            runOnUiThread {
+        HuaweiIapManager.beginPurchase(
+            activity = this,
+            productId = huaweiProductId,
+            developerPayload = "trueweb:$product",
+            onStarted = {
                 paymentLoadingProduct = null
-                result.onSuccess { payment ->
-                    pendingPaymentStore.paymentId = payment.id
-                    paymentMessage = t("Ожидаем оплату ${payment.title}", "Waiting for payment: ${payment.title}")
-                    openExternal(payment.confirmationUrl)
-                }.onFailure {
-                    managementError = unexpectedOrExpectedMessage("payment_create", it, t("Не удалось создать платёж", "Could not create payment"))
+            },
+            onFailure = {
+                paymentLoadingProduct = null
+                managementError = t(
+                    "Не удалось открыть оплату Huawei: ${cleanError(it)}",
+                    "Could not open Huawei payment: ${cleanError(it)}"
+                )
+            }
+        )
+    }
+
+    private fun loadHuaweiProducts() {
+        HuaweiIapManager.loadProducts(
+            activity = this,
+            onSuccess = { huaweiProducts = it },
+            onFailure = {
+                huaweiProducts = emptyMap()
+            }
+        )
+    }
+
+    private fun huaweiProductIdFor(backendProduct: String): String? {
+        if (deviceProduct?.code == backendProduct) {
+            return HuaweiIapManager.PRODUCT_EXTRA_DEVICE_30_DAYS
+        }
+        val tariff = tariffs.firstOrNull { it.code == backendProduct }
+        return if (tariff?.days == 30) HuaweiIapManager.PRODUCT_30_DAYS else null
+    }
+
+    private fun huaweiPriceLabels(): Map<String, String> {
+        val labels = mutableMapOf<String, String>()
+        tariffs.firstOrNull { it.days == 30 }?.let { tariff ->
+            huaweiProducts[HuaweiIapManager.PRODUCT_30_DAYS]?.price?.takeIf { it.isNotBlank() }?.let {
+                labels[tariff.code] = it
+            }
+        }
+        deviceProduct?.let { device ->
+            huaweiProducts[HuaweiIapManager.PRODUCT_EXTRA_DEVICE_30_DAYS]?.price?.takeIf { it.isNotBlank() }?.let {
+                labels[device.code] = it
+            }
+        }
+        return labels
+    }
+
+    private fun handleHuaweiPurchaseResult(data: Intent?) {
+        HuaweiIapManager.parsePurchaseResult(this, data)
+            .onFailure {
+                paymentLoadingProduct = null
+                paymentChecking = false
+                if (it.message == "PAYMENT_CANCELLED") {
+                    Toast.makeText(this, t("Платёж отменён", "Payment cancelled"), Toast.LENGTH_SHORT).show()
+                } else {
+                    managementError = t(
+                        "Не удалось завершить оплату Huawei: ${cleanError(it)}",
+                        "Could not complete Huawei payment: ${cleanError(it)}"
+                    )
+                }
+            }
+            .onSuccess { receipt ->
+                deliverHuaweiReceipt(receipt, showSuccess = true)
+            }
+    }
+
+    private fun recoverHuaweiPurchases() {
+        if (!authenticated || paymentChecking) return
+        HuaweiIapManager.loadUnconsumedPurchases(
+            activity = this,
+            onSuccess = { receipts ->
+                receipts.firstOrNull()?.let { deliverHuaweiReceipt(it, showSuccess = false) }
+            },
+            onFailure = { }
+        )
+    }
+
+    private fun deliverHuaweiReceipt(
+        receipt: HuaweiIapManager.PurchaseReceipt,
+        showSuccess: Boolean
+    ) {
+        if (paymentChecking) return
+        val token = sessionStore.accessToken ?: return
+        paymentChecking = true
+        managementError = null
+
+        Thread {
+            val result = TrueWebApi.deliverHuaweiPurchase(
+                accessToken = token,
+                purchaseData = receipt.purchaseData,
+                signature = receipt.signature
+            )
+            runOnUiThread {
+                result.onFailure {
+                    paymentChecking = false
+                    managementError = unexpectedOrExpectedMessage(
+                        "huawei_iap_delivery",
+                        it,
+                        t("Оплата прошла, но активация ещё не завершена", "Payment succeeded, but activation is not complete yet")
+                    )
+                }.onSuccess { delivery ->
+                    if (!delivery.delivered) {
+                        paymentChecking = false
+                        managementError = delivery.message.ifBlank {
+                            t("Оплата пока не подтверждена сервером", "Payment has not been confirmed by the server yet")
+                        }
+                        return@onSuccess
+                    }
+
+                    HuaweiIapManager.consume(
+                        activity = this,
+                        purchaseToken = receipt.purchaseToken,
+                        onSuccess = {
+                            paymentChecking = false
+                            paymentLoadingProduct = null
+                            paymentMessage = null
+                            if (showSuccess) {
+                                Toast.makeText(
+                                    this,
+                                    t("Оплата прошла успешно. Подписка обновлена.", "Payment completed successfully. Subscription updated."),
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                            loadData(forceServers = true)
+                            loadManagementData()
+                        },
+                        onFailure = {
+                            paymentChecking = false
+                            managementError = t(
+                                "Оплата активирована, но Huawei ещё не подтвердил расходование покупки. Повторим автоматически.",
+                                "Payment was activated, but Huawei has not confirmed consumption yet. It will be retried automatically."
+                            )
+                            loadData(forceServers = true)
+                            loadManagementData()
+                        }
+                    )
                 }
             }
         }.start()
