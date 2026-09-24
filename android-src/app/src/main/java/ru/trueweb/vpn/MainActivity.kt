@@ -1,5 +1,7 @@
 package ru.trueweb.vpn
 
+import ru.trueweb.vpn.i18n.L10n.t
+
 import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -38,7 +40,7 @@ import ru.trueweb.vpn.work.SubscriptionRefreshWorker
 
 class MainActivity : ComponentActivity() {
     companion object {
-        private const val GENERIC_APP_ERROR = "Что-то пошло не так. Отчёт об ошибке уже отправлен разработчику. Попробуйте немного позже."
+        private const val GENERIC_APP_ERROR = t("Что-то пошло не так. Отчёт об ошибке уже отправлен разработчику. Попробуйте немного позже.", "Something went wrong. An error report has been sent to the developer. Please try again later.")
     }
 
     private lateinit var sessionStore: SessionStore
@@ -85,7 +87,7 @@ class MainActivity : ComponentActivity() {
             if (result.resultCode == RESULT_OK) {
                 prepareVpnDataAndStart()
             } else {
-                Toast.makeText(this, "Без разрешения Android VPN подключение невозможно", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, t("Без разрешения Android VPN подключение невозможно", "Android VPN permission is required to connect"), Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -256,7 +258,7 @@ class MainActivity : ComponentActivity() {
         val isPaymentReturn = uri.scheme == "trueweb" && uri.host == "payment" && uri.path == "/return"
         if (isPaymentReturn) {
             if (authenticated && this::pendingPaymentStore.isInitialized) {
-                paymentMessage = "Проверяем оплату…"
+                paymentMessage = t("Проверяем оплату…", "Checking payment…")
                 checkPendingPayment(poll = true)
             }
             return
@@ -282,7 +284,7 @@ class MainActivity : ComponentActivity() {
                 val current = sessionStore.accessToken
                     ?: return@Thread runOnUiThread {
                         authInProgress = false
-                        authError = "Сессия не найдена"
+                        authError = t("Сессия не найдена", "Session not found")
                     }
                 TrueWebApi.linkTelegram(current, code)
             } else {
@@ -299,7 +301,7 @@ class MainActivity : ComponentActivity() {
                     authenticated = true
                     subscription = null
                     if (linkingTelegram) {
-                        Toast.makeText(this, "Telegram привязан к аккаунту TrueWeb", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this, t("Telegram привязан к аккаунту TrueWeb", "Telegram linked to your TrueWeb account"), Toast.LENGTH_LONG).show()
                     }
                     SubscriptionRefreshWorker.schedule(this)
                     val restartAfterLink = linkingTelegram && serverStore.desiredRunning
@@ -314,9 +316,9 @@ class MainActivity : ComponentActivity() {
                 }.onFailure {
                     if (linkingTelegram) sessionStore.telegramLinkPending = false
                     authError = if (linkingTelegram) {
-                        "Не удалось привязать Telegram: ${cleanError(it)}"
+                        t("Не удалось привязать Telegram: ${cleanError(it)}", "Could not link Telegram: ${cleanError(it)}")
                     } else {
-                        "Не удалось завершить вход: ${cleanError(it)}"
+                        t("Не удалось завершить вход: ${cleanError(it)}", "Could not complete sign-in: ${cleanError(it)}")
                     }
                     if (linkingTelegram) {
                         Toast.makeText(this, authError, Toast.LENGTH_LONG).show()
@@ -330,7 +332,7 @@ class MainActivity : ComponentActivity() {
         if (authInProgress) return
         val email = rawEmail.trim().lowercase()
         if (!email.contains("@") || email.length < 5) {
-            authError = "Введите корректный email"
+            authError = t("Введите корректный email", "Enter a valid email address")
             return
         }
         authInProgress = true
@@ -341,9 +343,9 @@ class MainActivity : ComponentActivity() {
                 authInProgress = false
                 result.onSuccess {
                     emailCodeSentTo = it.email
-                    Toast.makeText(this, "Код отправлен на ${it.email}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, t("Код отправлен на ${it.email}", "Code sent to ${it.email}"), Toast.LENGTH_SHORT).show()
                 }.onFailure {
-                    authError = "Не удалось отправить код: ${cleanError(it)}"
+                    authError = t("Не удалось отправить код: ${cleanError(it)}", "Could not send the code: ${cleanError(it)}")
                 }
             }
         }.start()
@@ -352,7 +354,7 @@ class MainActivity : ComponentActivity() {
     private fun verifyEmailAuth(email: String, code: String) {
         if (authInProgress) return
         if (code.length != 6) {
-            authError = "Введите 6-значный код"
+            authError = t("Введите 6-значный код", "Enter the 6-digit code")
             return
         }
         authInProgress = true
@@ -371,11 +373,11 @@ class MainActivity : ComponentActivity() {
                     subscription = null
                     SubscriptionRefreshWorker.schedule(this)
                     if (auth.isNew && auth.trialActivated) {
-                        Toast.makeText(this, "Готово — пробный доступ уже активирован", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this, t("Готово — пробный доступ уже активирован", "Done — trial access is already active"), Toast.LENGTH_LONG).show()
                     }
                     loadData(forceServers = true)
                 }.onFailure {
-                    authError = "Не удалось войти: ${cleanError(it)}"
+                    authError = t("Не удалось войти: ${cleanError(it)}", "Could not sign in: ${cleanError(it)}")
                 }
             }
         }.start()
@@ -384,7 +386,7 @@ class MainActivity : ComponentActivity() {
     private fun passwordLogin(login: String, password: String) {
         if (authInProgress) return
         if (login.trim().length < 3 || password.length < 8) {
-            authError = "Проверьте логин и пароль"
+            authError = t("Проверьте логин и пароль", "Check your username and password")
             return
         }
         authInProgress = true
@@ -403,7 +405,7 @@ class MainActivity : ComponentActivity() {
                     SubscriptionRefreshWorker.schedule(this)
                     loadData(forceServers = true)
                 }.onFailure {
-                    authError = "Неверный логин или пароль"
+                    authError = t("Неверный логин или пароль", "Incorrect username or password")
                 }
             }
         }.start()
@@ -465,7 +467,7 @@ class MainActivity : ComponentActivity() {
                     if ((it.message ?: "").contains("HTTP 401")) {
                         expireSession()
                     } else {
-                        profileError = unexpectedOrExpectedMessage("profile_refresh", it, "Не удалось обновить данные")
+                        profileError = unexpectedOrExpectedMessage("profile_refresh", it, t("Не удалось обновить данные", "Could not refresh data"))
                     }
                 }
 
@@ -493,13 +495,13 @@ class MainActivity : ComponentActivity() {
                     tariffs = it.tariffs
                     deviceProduct = it.deviceProduct
                 }.onFailure {
-                    managementError = unexpectedOrExpectedMessage("billing_catalog", it, "Не удалось загрузить тарифы")
+                    managementError = unexpectedOrExpectedMessage("billing_catalog", it, t("Не удалось загрузить тарифы", "Could not load plans"))
                 }
                 deviceResult.onSuccess {
                     devices = it.devices
                 }.onFailure {
                     val prefix = if (managementError.isNullOrBlank()) "" else "${managementError}\n"
-                    managementError = prefix + "Не удалось загрузить устройства: ${cleanError(it)}"
+                    managementError = prefix + t("Не удалось загрузить устройства: ${cleanError(it)}", "Could not load devices: ${cleanError(it)}")
                 }
             }
         }.start()
@@ -516,11 +518,11 @@ class MainActivity : ComponentActivity() {
                 trialLoading = false
                 result.onSuccess {
                     subscription = it
-                    Toast.makeText(this, "Пробный доступ активирован на 3 дня", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, t("Пробный доступ активирован на 3 дня", "3-day trial access activated"), Toast.LENGTH_LONG).show()
                     loadData(forceServers = true)
                     loadManagementData()
                 }.onFailure {
-                    profileError = unexpectedOrExpectedMessage("trial_activate", it, "Не удалось активировать пробный доступ")
+                    profileError = unexpectedOrExpectedMessage("trial_activate", it, t("Не удалось активировать пробный доступ", "Could not activate trial access"))
                 }
             }
         }.start()
@@ -539,10 +541,10 @@ class MainActivity : ComponentActivity() {
                 paymentLoadingProduct = null
                 result.onSuccess { payment ->
                     pendingPaymentStore.paymentId = payment.id
-                    paymentMessage = "Ожидаем оплату ${payment.title}"
+                    paymentMessage = t("Ожидаем оплату ${payment.title}", "Waiting for payment: ${payment.title}")
                     openExternal(payment.confirmationUrl)
                 }.onFailure {
-                    managementError = unexpectedOrExpectedMessage("payment_create", it, "Не удалось создать платёж")
+                    managementError = unexpectedOrExpectedMessage("payment_create", it, t("Не удалось создать платёж", "Could not create payment"))
                 }
             }
         }.start()
@@ -572,23 +574,23 @@ class MainActivity : ComponentActivity() {
                     status?.processed == true -> {
                         pendingPaymentStore.clear()
                         paymentMessage = null
-                        Toast.makeText(this, "Оплата прошла успешно. Подписка обновлена.", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this, t("Оплата прошла успешно. Подписка обновлена.", "Payment completed successfully. Subscription updated."), Toast.LENGTH_LONG).show()
                         loadData(forceServers = true)
                         loadManagementData()
                     }
                     status?.status == "canceled" -> {
                         pendingPaymentStore.clear()
                         paymentMessage = null
-                        Toast.makeText(this, "Платёж отменён", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, t("Платёж отменён", "Payment cancelled"), Toast.LENGTH_SHORT).show()
                     }
                     status?.status == "succeeded" -> {
-                        paymentMessage = "Оплата получена, завершаем активацию…"
+                        paymentMessage = t("Оплата получена, завершаем активацию…", "Payment received, completing activation…")
                         loadData(forceServers = true)
                     }
                     lastError != null -> {
-                        managementError = unexpectedOrExpectedMessage("payment_status", lastError!!, "Не удалось проверить оплату")
+                        managementError = unexpectedOrExpectedMessage("payment_status", lastError!!, t("Не удалось проверить оплату", "Could not check payment"))
                     }
-                    else -> paymentMessage = "Платёж пока не завершён"
+                    else -> paymentMessage = t("Платёж пока не завершён", "Payment is not complete yet")
                 }
             }
         }.start()
@@ -600,7 +602,7 @@ class MainActivity : ComponentActivity() {
         managementError = null
         Toast.makeText(
             this,
-            "Платёж скрыт. Это не отменяет его в ЮKassa.",
+            t("Платёж скрыт. Это не отменяет его в ЮKassa.", "Payment hidden. This does not cancel it in YooKassa."),
             Toast.LENGTH_LONG
         ).show()
     }
@@ -615,11 +617,11 @@ class MainActivity : ComponentActivity() {
             runOnUiThread {
                 managementLoading = false
                 result.onSuccess {
-                    Toast.makeText(this, "Устройство удалено", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, t("Устройство удалено", "Device removed"), Toast.LENGTH_SHORT).show()
                     loadManagementData()
                     loadData(forceServers = true)
                 }.onFailure {
-                    managementError = unexpectedOrExpectedMessage("device_delete", it, "Не удалось удалить устройство")
+                    managementError = unexpectedOrExpectedMessage("device_delete", it, t("Не удалось удалить устройство", "Could not remove device"))
                 }
             }
         }.start()
@@ -634,7 +636,7 @@ class MainActivity : ComponentActivity() {
             return
         }
         if (!info.active) {
-            Toast.makeText(this, "Сначала активируйте пробный период или подписку", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, t("Сначала активируйте пробный период или подписку", "Activate a trial or subscription first"), Toast.LENGTH_SHORT).show()
             return
         }
         prepareAndStartVpn()
@@ -648,7 +650,7 @@ class MainActivity : ComponentActivity() {
         // Incy or another VPN owns the slot, this is where Android transfers it to
         // TrueWeb after the user's confirmation instead of leaving TrueWeb behind it.
         if (hasAnotherVpnNetwork()) {
-            Toast.makeText(this, "Переключаем VPN на TrueWeb…", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, t("Переключаем VPN на TrueWeb…", "Switching VPN to TrueWeb…"), Toast.LENGTH_SHORT).show()
         }
         val prepareIntent = VpnService.prepare(this)
         if (prepareIntent != null) vpnPermissionLauncher.launch(prepareIntent)
@@ -683,7 +685,7 @@ class MainActivity : ComponentActivity() {
                     return@runOnUiThread
                 }
                 if (!serverStore.hasRequiredNormalServers()) {
-                    profileError = "Не получены основные параметры подключения TrueWeb"
+                    profileError = t("Не получены основные параметры подключения TrueWeb", "Could not obtain the primary TrueWeb connection settings")
                     Toast.makeText(this, profileError, Toast.LENGTH_LONG).show()
                     return@runOnUiThread
                 }
@@ -718,10 +720,10 @@ class MainActivity : ComponentActivity() {
             runOnUiThread {
                 accountActionLoading = false
                 result.onSuccess {
-                    accountActionMessage = "Логин и пароль сохранены"
-                    Toast.makeText(this, "Логин и пароль сохранены", Toast.LENGTH_SHORT).show()
+                    accountActionMessage = t("Логин и пароль сохранены", "Username and password saved")
+                    Toast.makeText(this, t("Логин и пароль сохранены", "Username and password saved"), Toast.LENGTH_SHORT).show()
                 }.onFailure {
-                    accountActionMessage = unexpectedOrExpectedMessage("password_setup", it, "Не удалось сохранить данные для входа")
+                    accountActionMessage = unexpectedOrExpectedMessage("password_setup", it, t("Не удалось сохранить данные для входа", "Could not save sign-in credentials"))
                     Toast.makeText(this, accountActionMessage, Toast.LENGTH_LONG).show()
                 }
             }
@@ -732,7 +734,7 @@ class MainActivity : ComponentActivity() {
         val token = sessionStore.accessToken ?: return
         if (accountActionLoading) return
         accountActionLoading = true
-        accountActionMessage = "Удаляем аккаунт…"
+        accountActionMessage = t("Удаляем аккаунт…", "Deleting account…")
         TrueWebVpnService.stop(this)
         Thread {
             val result = TrueWebApi.deleteAccount(token, deviceIdentity)
@@ -740,9 +742,9 @@ class MainActivity : ComponentActivity() {
                 accountActionLoading = false
                 result.onSuccess {
                     clearLocalAccount()
-                    Toast.makeText(this, "Аккаунт удалён", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, t("Аккаунт удалён", "Account deleted"), Toast.LENGTH_LONG).show()
                 }.onFailure {
-                    accountActionMessage = unexpectedOrExpectedMessage("account_delete", it, "Не удалось удалить аккаунт")
+                    accountActionMessage = unexpectedOrExpectedMessage("account_delete", it, t("Не удалось удалить аккаунт", "Could not delete account"))
                     Toast.makeText(this, accountActionMessage, Toast.LENGTH_LONG).show()
                 }
             }
@@ -777,11 +779,11 @@ class MainActivity : ComponentActivity() {
         sessionStore.clear()
         authenticated = false
         subscription = null
-        authError = "Сессия истекла. Войдите снова."
+        authError = t("Сессия истекла. Войдите снова.", "Session expired. Please sign in again.")
     }
 
     private fun unexpectedOrExpectedMessage(stage: String, t: Throwable, prefix: String): String {
-        if (!hasPhysicalNetwork()) return "Нет подключения к интернету. Проверьте Wi‑Fi или мобильную сеть."
+        if (!hasPhysicalNetwork()) return t("Нет подключения к интернету. Проверьте Wi‑Fi или мобильную сеть.", "No internet connection. Check Wi-Fi or mobile data.")
         return if (shouldReportUnexpectedError(t)) {
             reportUnexpectedAppError(stage, t)
             GENERIC_APP_ERROR
@@ -856,8 +858,8 @@ class MainActivity : ComponentActivity() {
         val msg = cleanError(t)
         return when {
             msg.contains("Лимит устройств", ignoreCase = true) -> msg
-            (t.message ?: "").contains("HTTP 403") -> "Лимит устройств исчерпан. Откройте «Управление подпиской» и удалите старое устройство или добавьте слот."
-            else -> "Не удалось обновить серверы: $msg"
+            (t.message ?: "").contains("HTTP 403") -> t("Лимит устройств исчерпан. Откройте «Управление подпиской» и удалите старое устройство или добавьте слот.", "Device limit reached. Open Manage subscription and remove an old device or add a slot.")
+            else -> t("Не удалось обновить серверы: $msg", "Could not refresh servers: $msg")
         }
     }
 
@@ -894,9 +896,9 @@ class MainActivity : ComponentActivity() {
                 geoDataRefreshing = false
                 result.onSuccess {
                     geoDataLastUpdatedMs = it
-                    Toast.makeText(this, "GeoData обновлена. Новые правила применятся при следующем подключении VPN.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, t("GeoData обновлена. Новые правила применятся при следующем подключении VPN.", "GeoData updated. New rules will apply the next time the VPN connects."), Toast.LENGTH_LONG).show()
                 }.onFailure {
-                    Toast.makeText(this, "Не удалось обновить GeoData. Оставлены текущие базы.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, t("Не удалось обновить GeoData. Оставлены текущие базы.", "Could not update GeoData. The current local databases will be kept."), Toast.LENGTH_LONG).show()
                 }
             }
         }.start()
@@ -904,11 +906,11 @@ class MainActivity : ComponentActivity() {
 
     private fun openExternal(url: String) {
         runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
-            .onFailure { Toast.makeText(this, "Не удалось открыть ссылку", Toast.LENGTH_SHORT).show() }
+            .onFailure { Toast.makeText(this, t("Не удалось открыть ссылку", "Could not open the link"), Toast.LENGTH_SHORT).show() }
     }
 
     private fun cleanError(t: Throwable): String {
-        val raw = t.message ?: "неизвестная ошибка"
+        val raw = t.message ?: t("неизвестная ошибка", "unknown error")
         return raw.substringAfter(": ", raw).take(220)
     }
 }
@@ -932,11 +934,11 @@ private fun LoadingScreen(errorText: String?, onRetry: () -> Unit) {
                 if (errorText.isNullOrBlank()) {
                     CircularProgressIndicator()
                     Spacer(Modifier.height(18.dp))
-                    Text("Загружаем подписку…", color = MaterialTheme.colorScheme.onBackground)
+                    Text(t("Загружаем подписку…", "Loading subscription…"), color = MaterialTheme.colorScheme.onBackground)
                 } else {
                     Text(errorText, color = MaterialTheme.colorScheme.error)
                     Spacer(Modifier.height(16.dp))
-                    Button(onClick = onRetry) { Text("Повторить") }
+                    Button(onClick = onRetry) { Text(t("Повторить", "Retry")) }
                 }
             }
         }
