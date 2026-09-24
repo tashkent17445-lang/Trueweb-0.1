@@ -34,6 +34,16 @@ jobs:
 
           echo "AppGallery installer guard passed"
 
+          HUAWEI_CONFIG="android-src/app/agconnect-services.json"
+          test -s "$HUAWEI_CONFIG"
+          grep -q '"app_id"[[:space:]]*:[[:space:]]*"119100451"' "$HUAWEI_CONFIG"
+          grep -q '"package_name"[[:space:]]*:[[:space:]]*"ru.trueweb.vpn"' "$HUAWEI_CONFIG"
+          if grep -q -E '"client_secret"|"api_key"' "$HUAWEI_CONFIG"; then
+            echo "Huawei configuration must not contain client_secret/api_key"
+            exit 1
+          fi
+          echo "Huawei AGConnect config guard passed"
+
       - name: Setup Java
         uses: actions/setup-java@v5
         with:
