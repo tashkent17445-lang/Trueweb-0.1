@@ -771,7 +771,7 @@ fun HomeScreen(
             text = {
                 Text(
                     if (device.isCurrent) t("Это текущее устройство. После удаления оно может зарегистрироваться снова при обновлении подключения.", "This is the current device. After deletion, it may register again when the connection is refreshed.")
-                    else "${device.title}\n\nПосле удаления освободится один слот."
+                    else t("${device.title}\\n\\nПосле удаления освободится один слот.", "${device.title}\\n\\nDeleting it will free one device slot.")
                 )
             },
             confirmButton = {
@@ -1146,7 +1146,7 @@ private fun SubscriptionManagementScreen(
             text = {
                 Text(
                     if (device.isCurrent) t("Это текущее устройство. После удаления оно может зарегистрироваться снова при обновлении подключения.", "This is the current device. After deletion, it may register again when the connection is refreshed.")
-                    else "${device.title}\n\nПосле удаления освободится один слот."
+                    else t("${device.title}\\n\\nПосле удаления освободится один слот.", "${device.title}\\n\\nDeleting it will free one device slot.")
                 )
             },
             confirmButton = {
