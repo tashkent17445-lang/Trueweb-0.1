@@ -5,6 +5,8 @@ buildscript {
         maven { url = uri("https://developer.huawei.com/repo/") }
     }
     dependencies {
+        // AGConnect inspects the Android Gradle Plugin from the buildscript classpath.
+        classpath("com.android.tools.build:gradle:9.4.0")
         classpath("com.huawei.agconnect:agcp:1.9.6.300")
     }
 }
