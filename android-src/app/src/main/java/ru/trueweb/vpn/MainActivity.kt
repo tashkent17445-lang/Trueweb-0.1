@@ -1141,6 +1141,9 @@ class MainActivity : ComponentActivity() {
 
     private fun cleanError(t: Throwable): String {
         val raw = t.message ?: t("неизвестная ошибка", "unknown error")
+        if (raw.startsWith("Huawei sign-in failed", ignoreCase = true)) {
+            return raw.take(220)
+        }
         return raw.substringAfter(": ", raw).take(220)
     }
 }
