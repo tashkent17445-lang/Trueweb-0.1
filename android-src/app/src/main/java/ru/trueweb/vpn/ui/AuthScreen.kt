@@ -16,7 +16,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-private enum class AuthView { CHOICE, EMAIL, PASSWORD }
+private enum class AuthView { CHOICE, EMAIL, PASSWORD, HUAWEI_DIAGNOSTICS }
 
 @Composable
 fun AuthScreen(
@@ -24,6 +24,7 @@ fun AuthScreen(
     errorText: String?,
     themeMode: TrueWebThemeMode,
     emailCodeSentTo: String?,
+    huaweiDiagnostics: String,
     onProxyClick: () -> Unit,
     onHuaweiLoginClick: () -> Unit,
     onTelegramLoginClick: () -> Unit,
@@ -102,6 +103,11 @@ fun AuthScreen(
                             onClick = { view = AuthView.PASSWORD },
                             enabled = !authInProgress
                         ) { Text(t("Войти по логину и паролю", "Sign in with username and password")) }
+
+                        TextButton(
+                            onClick = { view = AuthView.HUAWEI_DIAGNOSTICS },
+                            enabled = !authInProgress
+                        ) { Text(t("Диагностика HUAWEI", "HUAWEI diagnostics")) }
                     }
 
                     AuthView.EMAIL -> {
@@ -214,9 +220,46 @@ fun AuthScreen(
                         }
                         TextButton(onClick = { view = AuthView.CHOICE }, enabled = !authInProgress) { Text(t("Назад", "Back")) }
                     }
+
+                    AuthView.HUAWEI_DIAGNOSTICS -> {
+                        Text(
+                            t("Диагностика HUAWEI", "HUAWEI diagnostics"),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Card(modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                huaweiDiagnostics,
+                                modifier = Modifier.padding(14.dp),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        Spacer(Modifier.height(14.dp))
+                        Button(
+                            onClick = onHuaweiLoginClick,
+                            enabled = !authInProgress,
+                            modifier = Modifier.fillMaxWidth().height(54.dp),
+                            shape = RoundedCornerShape(18.dp)
+                        ) {
+                            if (authInProgress) {
+                                CircularProgressIndicator(
+                                    Modifier.size(22.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                            } else {
+                                Text(t("Проверить вход HUAWEI ID", "Test HUAWEI ID sign-in"))
+                            }
+                        }
+                        TextButton(
+                            onClick = { view = AuthView.CHOICE },
+                            enabled = !authInProgress
+                        ) { Text(t("Назад", "Back")) }
+                    }
                 }
 
-                if (view != AuthView.PASSWORD) {
+                if (view != AuthView.PASSWORD && view != AuthView.HUAWEI_DIAGNOSTICS) {
                     Spacer(Modifier.height(10.dp))
                     OutlinedButton(
                         onClick = onProxyClick,
@@ -231,13 +274,15 @@ fun AuthScreen(
                     Text(errorText, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall)
                 }
 
-                Spacer(Modifier.height(18.dp))
-                Text(
-                    t("Email работает без Telegram. После подключения VPN Telegram можно привязать к тому же аккаунту.", "Email works without Telegram. After connecting the VPN, you can link Telegram to the same account."),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodySmall,
-                    textAlign = TextAlign.Center
-                )
+                if (view != AuthView.HUAWEI_DIAGNOSTICS) {
+                    Spacer(Modifier.height(18.dp))
+                    Text(
+                        t("Email работает без Telegram. После подключения VPN Telegram можно привязать к тому же аккаунту.", "Email works without Telegram. After connecting the VPN, you can link Telegram to the same account."),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
         }
     }
