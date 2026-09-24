@@ -55,10 +55,38 @@ object TrueWebApi {
     }
 
 
+    data class HuaweiAuthResult(
+        val accessToken: String,
+        val isNew: Boolean,
+        val trialActivated: Boolean,
+        val needsTelegramLink: Boolean
+    )
+
+    data class HuaweiPurchaseDelivery(
+        val delivered: Boolean,
+        val message: String
+    )
+
     data class PasswordAuthResult(
         val accessToken: String,
         val needsTelegramLink: Boolean
     )
+
+    fun huaweiLogin(authorizationCode: String): Result<HuaweiAuthResult> = runCatching {
+        val root = request(
+            method = "POST",
+            path = "/auth/huawei",
+            body = JSONObject()
+                .put("authorization_code", authorizationCode.trim())
+                .toString()
+        )
+        HuaweiAuthResult(
+            accessToken = root.getString("access_token"),
+            isNew = root.optBoolean("is_new", false),
+            trialActivated = root.optBoolean("trial_activated", false),
+            needsTelegramLink = root.optBoolean("needs_telegram_link", true)
+        )
+    }
 
     fun passwordLogin(login: String, password: String): Result<PasswordAuthResult> = runCatching {
         val root = request(
@@ -219,6 +247,26 @@ object TrueWebApi {
             product = root.optString("product", product),
             title = root.optString("title", t("Оплата TrueWeb", "TrueWeb payment")),
             price = root.optInt("price", 0)
+        )
+    }
+
+    fun deliverHuaweiPurchase(
+        accessToken: String,
+        purchaseData: String,
+        signature: String
+    ): Result<HuaweiPurchaseDelivery> = runCatching {
+        val root = request(
+            method = "POST",
+            path = "/payment/huawei/verify",
+            accessToken = accessToken,
+            body = JSONObject()
+                .put("purchase_data", purchaseData)
+                .put("signature", signature)
+                .toString()
+        )
+        HuaweiPurchaseDelivery(
+            delivered = root.optBoolean("delivered", false),
+            message = root.optString("message", "")
         )
     }
 
