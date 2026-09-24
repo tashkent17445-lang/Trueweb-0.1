@@ -1,5 +1,7 @@
 package ru.trueweb.vpn.vpn
 
+import ru.trueweb.vpn.i18n.L10n.t
+
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -76,7 +78,7 @@ class TrueWebVpnService : VpnService() {
         private const val WL_RECOVERY_MAX_SECONDS = 211L
         private const val STABLE_PROBE_COUNT = 3
         private const val STABLE_PROBE_GAP_MS = 4000L
-        private const val USER_ERROR_MESSAGE = "Что-то пошло не так. Отчёт об ошибке уже отправлен разработчику. Попробуйте подключиться немного позже."
+        private val USER_ERROR_MESSAGE = t("Что-то пошло не так. Отчёт об ошибке уже отправлен разработчику. Попробуйте подключиться немного позже.", "Something went wrong. An error report has been sent to the developer. Please try connecting again later.")
 
         private val _state = MutableStateFlow(TunnelState.STOPPED)
         val state: StateFlow<TunnelState> = _state
@@ -192,7 +194,7 @@ class TrueWebVpnService : VpnService() {
                 _activeRole.value = VpnRole.UNKNOWN
                 _state.value = TunnelState.CONNECTING
                 _lastError.value = null
-                updateNotification("Ждём сеть…")
+                updateNotification(t("Ждём сеть…", "Waiting for network…"))
             }.start()
 
             physicalNetwork?.let {
@@ -233,7 +235,7 @@ class TrueWebVpnService : VpnService() {
                 store.desiredMode = VpnMode.NORMAL
                 _mode.value = VpnMode.NORMAL
                 _whitelistSuggested.value = false
-                startForeground(NOTIFICATION_ID, notification("Подключение…"))
+                startForeground(NOTIFICATION_ID, notification(t("Подключение…", "Connecting…")))
                 startTunnelAsync()
             }
 
@@ -243,7 +245,7 @@ class TrueWebVpnService : VpnService() {
                 store.desiredMode = VpnMode.NORMAL
                 _mode.value = VpnMode.NORMAL
                 _whitelistSuggested.value = false
-                startForeground(NOTIFICATION_ID, notification("Подключение…"))
+                startForeground(NOTIFICATION_ID, notification(t("Подключение…", "Connecting…")))
                 startTunnelAsync()
             }
 
@@ -256,7 +258,7 @@ class TrueWebVpnService : VpnService() {
             else -> {
                 if (!store.desiredRunning) return START_NOT_STICKY
                 _mode.value = store.desiredMode
-                startForeground(NOTIFICATION_ID, notification("Восстанавливаем подключение…"))
+                startForeground(NOTIFICATION_ID, notification(t("Восстанавливаем подключение…", "Restoring connection…")))
                 startTunnelAsync()
             }
         }
@@ -277,14 +279,14 @@ class TrueWebVpnService : VpnService() {
         store.activeRole = VpnRole.UNKNOWN
         cancelHealthSchedules()
         stopTunnel(clearError = false)
-        _lastError.value = "TrueWeb отключён другим VPN-приложением. Нажмите кнопку подключения, чтобы снова включить TrueWeb."
-        updateNotification("Отключено другим VPN-приложением")
+        _lastError.value = t("TrueWeb отключён другим VPN-приложением. Нажмите кнопку подключения, чтобы снова включить TrueWeb.", "TrueWeb was disconnected by another VPN app. Tap Connect to enable TrueWeb again.")
+        updateNotification(t("Отключено другим VPN-приложением", "Disconnected by another VPN app"))
         stopSelf()
         super.onRevoke()
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        if (store.desiredRunning) updateNotification("TrueWeb работает в фоне")
+        if (store.desiredRunning) updateNotification(t("TrueWeb работает в фоне", "TrueWeb is running in the background"))
         super.onTaskRemoved(rootIntent)
     }
 
@@ -356,7 +358,7 @@ class TrueWebVpnService : VpnService() {
                 _lastError.value = null
                 _state.value = TunnelState.CONNECTING
                 _mode.value = store.desiredMode
-                updateNotification("Подключение…")
+                updateNotification(t("Подключение…", "Connecting…"))
 
                 val network = physicalNetwork ?: selectPhysicalNetwork().also { physicalNetwork = it }
                 if (network == null) {
@@ -364,7 +366,7 @@ class TrueWebVpnService : VpnService() {
                     store.activeRole = VpnRole.UNKNOWN
                     _activeRole.value = VpnRole.UNKNOWN
                     _state.value = TunnelState.CONNECTING
-                    updateNotification("Ждём сеть…")
+                    updateNotification(t("Ждём сеть…", "Waiting for network…"))
                     return@Thread
                 }
                 runCatching { setUnderlyingNetworks(arrayOf(network)) }
@@ -402,7 +404,7 @@ class TrueWebVpnService : VpnService() {
                 _state.value = TunnelState.RUNNING
                 _lastError.value = null
                 _whitelistSuggested.value = false
-                updateNotification(if (selectedMode == VpnMode.WHITELIST) "VPN подключён · резервный режим" else "VPN подключён")
+                updateNotification(if (selectedMode == VpnMode.WHITELIST) t("VPN подключён · резервный режим", "VPN connected · fallback mode") else t("VPN подключён", "VPN connected"))
                 GeoDataRefreshWorker.refreshIfStale(applicationContext)
                 if (selectedMode == VpnMode.WHITELIST) scheduleWhitelistRecovery()
                 else scheduleNormalHealth()
@@ -410,7 +412,7 @@ class TrueWebVpnService : VpnService() {
                 reportUnexpectedError("vpn_start", e)
                 _lastError.value = USER_ERROR_MESSAGE
                 _state.value = TunnelState.ERROR
-                updateNotification("Ошибка подключения. Отчёт отправлен разработчику")
+                updateNotification(t("Ошибка подключения. Отчёт отправлен разработчику", "Connection error. A report was sent to the developer"))
                 stopCoreOnly()
                 // Re-evaluate all paths soon. If the current WL path crashed this
                 // gives ordinary entries an immediate chance before WL is retried.
@@ -501,7 +503,7 @@ class TrueWebVpnService : VpnService() {
         _lastError.value = USER_ERROR_MESSAGE
         _state.value = TunnelState.ERROR
         _whitelistSuggested.value = false
-        updateNotification("Не удалось подключиться. Повторяем попытку…")
+        updateNotification(t("Не удалось подключиться. Повторяем попытку…", "Could not connect. Retrying…"))
         scheduleNormalHealth(15L)
     }
 
@@ -697,7 +699,7 @@ class TrueWebVpnService : VpnService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             getSystemService(NotificationManager::class.java).createNotificationChannel(
                 NotificationChannel(CHANNEL_ID, "TrueWeb VPN", NotificationManager.IMPORTANCE_LOW).apply {
-                    description = "Подключение TrueWeb VPN"
+                    description = t("Подключение TrueWeb VPN", "TrueWeb VPN connection")
                     setShowBadge(false)
                 }
             )
