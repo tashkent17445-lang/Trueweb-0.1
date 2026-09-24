@@ -31,12 +31,18 @@ class RoutingStore(context: Context) {
         return RoutingPolicy(
             smartAuto = prefs.getBoolean("smart_auto", true),
             bypassRu = prefs.getBoolean("bypass_ru", true),
-            excludedPackages = packages.distinct()
+            // Browsers must always stay inside TrueWeb. A browser can open any site,
+            // so excluding the whole app is too broad even when the server sends it.
+            excludedPackages = packages
+                .filterNot { it in FORCE_VPN_PACKAGES }
+                .distinct()
         )
     }
 
     fun save(policy: RoutingPolicy) {
-        val packages = (policy.excludedPackages.ifEmpty { DEFAULT_EXCLUDED_PACKAGES }).distinct()
+        val packages = (policy.excludedPackages.ifEmpty { DEFAULT_EXCLUDED_PACKAGES })
+            .filterNot { it in FORCE_VPN_PACKAGES }
+            .distinct()
         val arr = JSONArray().apply { packages.forEach { put(it) } }
         prefs.edit()
             .putBoolean("smart_auto", policy.smartAuto)
@@ -59,8 +65,14 @@ class RoutingStore(context: Context) {
             "ru.wildberries",
             "com.avito.android",
             "ru.yandex.taxi",
-            "ru.yandex.yandexmaps",
-            "com.yandex.browser"
+            "ru.yandex.yandexmaps"
+        )
+
+        // Russian browsers are intentionally never excluded from the VPN tunnel.
+        // This also overrides an older cached/server routing list after app update.
+        val FORCE_VPN_PACKAGES = setOf(
+            "com.yandex.browser", // Yandex Browser
+            "ru.mail.browser"     // Atom Browser
         )
     }
 }
