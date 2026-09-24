@@ -90,11 +90,6 @@ class MainActivity : ComponentActivity() {
     private var geoDataLastUpdatedMs by mutableLongStateOf(0L)
     private var geoDataRefreshing by mutableStateOf(false)
 
-    private val huaweiAuthLauncher =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            handleHuaweiAuthResult(result.data)
-        }
-
     private val vpnPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == RESULT_OK) {
@@ -250,11 +245,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    @Deprecated("Huawei IAP still returns the checkout result through onActivityResult")
+    @Deprecated("Huawei Account Kit and IAP return results through onActivityResult")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == HuaweiIapManager.REQUEST_CODE_BUY) {
-            handleHuaweiPurchaseResult(data)
+        when (requestCode) {
+            HuaweiAuthManager.REQUEST_CODE_SIGN_IN -> handleHuaweiAuthResult(data, resultCode)
+            HuaweiIapManager.REQUEST_CODE_BUY -> handleHuaweiPurchaseResult(data)
         }
     }
 
@@ -358,7 +354,11 @@ class MainActivity : ComponentActivity() {
         authInProgress = true
         authError = null
         runCatching {
-            huaweiAuthLauncher.launch(HuaweiAuthManager.signInIntent(this))
+            @Suppress("DEPRECATION")
+            startActivityForResult(
+                HuaweiAuthManager.signInIntent(this),
+                HuaweiAuthManager.REQUEST_CODE_SIGN_IN
+            )
         }.onFailure {
             authInProgress = false
             authError = t(
@@ -368,8 +368,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun handleHuaweiAuthResult(data: Intent?) {
-        val authCode = HuaweiAuthManager.parseAuthorizationCode(data)
+    private fun handleHuaweiAuthResult(data: Intent?, resultCode: Int) {
+        val authCode = HuaweiAuthManager.parseAuthorizationCode(data, resultCode)
         authCode.onFailure {
             authInProgress = false
             authError = t(
