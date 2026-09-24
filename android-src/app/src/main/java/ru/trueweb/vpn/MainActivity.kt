@@ -40,7 +40,7 @@ import ru.trueweb.vpn.work.SubscriptionRefreshWorker
 
 class MainActivity : ComponentActivity() {
     companion object {
-        private const val GENERIC_APP_ERROR = t("Что-то пошло не так. Отчёт об ошибке уже отправлен разработчику. Попробуйте немного позже.", "Something went wrong. An error report has been sent to the developer. Please try again later.")
+        private val GENERIC_APP_ERROR = t("Что-то пошло не так. Отчёт об ошибке уже отправлен разработчику. Попробуйте немного позже.", "Something went wrong. An error report has been sent to the developer. Please try again later.")
     }
 
     private lateinit var sessionStore: SessionStore
