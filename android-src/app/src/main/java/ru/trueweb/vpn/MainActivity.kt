@@ -19,13 +19,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.core.content.FileProvider
 import androidx.core.view.WindowCompat
 import ru.trueweb.vpn.api.TrueWebApi
 import ru.trueweb.vpn.auth.AuthBackend
 import ru.trueweb.vpn.auth.SessionStore
 import ru.trueweb.vpn.model.*
-import ru.trueweb.vpn.store.AppUpdateManager
 import ru.trueweb.vpn.store.DeviceIdentity
 import ru.trueweb.vpn.store.GeoDataManager
 import ru.trueweb.vpn.store.LegalConsentStore
@@ -37,7 +35,6 @@ import ru.trueweb.vpn.ui.*
 import ru.trueweb.vpn.vpn.TrueWebVpnService
 import ru.trueweb.vpn.work.GeoDataRefreshWorker
 import ru.trueweb.vpn.work.SubscriptionRefreshWorker
-import java.io.File
 
 class MainActivity : ComponentActivity() {
     companion object {
@@ -82,11 +79,6 @@ class MainActivity : ComponentActivity() {
     private var batteryNoticeDismissed by mutableStateOf(false)
     private var geoDataLastUpdatedMs by mutableLongStateOf(0L)
     private var geoDataRefreshing by mutableStateOf(false)
-    private var availableAppUpdate by mutableStateOf<AppUpdateManager.UpdateInfo?>(null)
-    private var appUpdateChecking by mutableStateOf(false)
-    private var appUpdateDownloading by mutableStateOf(false)
-    private var appUpdateMessage by mutableStateOf<String?>(null)
-    private var pendingUpdateApk: File? = null
 
     private val vpnPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -94,17 +86,6 @@ class MainActivity : ComponentActivity() {
                 prepareVpnDataAndStart()
             } else {
                 Toast.makeText(this, "Без разрешения Android VPN подключение невозможно", Toast.LENGTH_SHORT).show()
-            }
-        }
-
-    private val unknownSourcesLauncher =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-            val apk = pendingUpdateApk
-            if (apk != null && canInstallPackages()) {
-                pendingUpdateApk = null
-                launchPackageInstaller(apk)
-            } else if (apk != null) {
-                Toast.makeText(this, "Разрешите TrueWeb устанавливать обновления из этого источника", Toast.LENGTH_LONG).show()
             }
         }
 
@@ -120,11 +101,6 @@ class MainActivity : ComponentActivity() {
         batteryNoticeDismissed = getSharedPreferences("trueweb_ui", MODE_PRIVATE)
             .getBoolean("battery_notice_dismissed", false)
         refreshBatteryOptimizationState()
-        if (pendingUpdateApk != null && canInstallPackages()) {
-            val apk = pendingUpdateApk
-            pendingUpdateApk = null
-            if (apk != null) launchPackageInstaller(apk)
-        }
         geoDataLastUpdatedMs = GeoDataManager.lastSuccessMs(this)
         GeoDataRefreshWorker.schedule(this)
         GeoDataRefreshWorker.refreshIfStale(this)
@@ -219,11 +195,9 @@ class MainActivity : ComponentActivity() {
                             showBatteryOptimizationNotice = batteryOptimizationRestricted && !batteryNoticeDismissed,
                             geoDataLastUpdatedMs = geoDataLastUpdatedMs,
                             geoDataRefreshing = geoDataRefreshing,
-                            appUpdateChecking = appUpdateChecking,
                             onBatterySettings = { openBatteryOptimizationSettings() },
                             onDismissBatteryNotice = { dismissBatteryNotice() },
                             onGeoDataRefresh = { refreshGeoDataNow() },
-                            onAppUpdateCheck = { checkAppUpdate(silent = false, force = true) },
                             onConnectClick = { toggleNormalVpn(info, vpnState) },
                             onTrialClick = { activateTrial() },
                             onRefresh = { loadData(forceServers = true) },
@@ -244,48 +218,9 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                val update = availableAppUpdate
-                if (update != null) {
-                    AlertDialog(
-                        onDismissRequest = { if (!appUpdateDownloading) availableAppUpdate = null },
-                        title = { Text("Доступно обновление TrueWeb ${update.versionName}") },
-                        text = {
-                            Column {
-                                Text(
-                                    if (update.notes.isBlank())
-                                        "Можно обновить приложение сейчас. Аккаунт, подписка и настройки сохранятся."
-                                    else update.notes
-                                )
-                                if (!appUpdateMessage.isNullOrBlank()) {
-                                    Spacer(Modifier.height(12.dp))
-                                    Text(appUpdateMessage!!, style = MaterialTheme.typography.bodySmall)
-                                }
-                                if (appUpdateDownloading) {
-                                    Spacer(Modifier.height(14.dp))
-                                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                                }
-                            }
-                        },
-                        confirmButton = {
-                            Button(
-                                onClick = { downloadAndInstallUpdate(update) },
-                                enabled = !appUpdateDownloading
-                            ) {
-                                Text(if (appUpdateDownloading) "Скачиваем…" else "Обновить")
-                            }
-                        },
-                        dismissButton = {
-                            TextButton(
-                                onClick = { availableAppUpdate = null },
-                                enabled = !appUpdateDownloading
-                            ) { Text("Позже") }
-                        }
-                    )
-                }
             }
         }
 
-        checkAppUpdate(silent = true, force = false)
 
         if (authenticated) {
             SubscriptionRefreshWorker.schedule(this)
@@ -297,11 +232,6 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         refreshBatteryOptimizationState()
-        if (pendingUpdateApk != null && canInstallPackages()) {
-            val apk = pendingUpdateApk
-            pendingUpdateApk = null
-            if (apk != null) launchPackageInstaller(apk)
-        }
         geoDataLastUpdatedMs = GeoDataManager.lastSuccessMs(this)
         GeoDataRefreshWorker.refreshIfStale(this)
         if (this::sessionStore.isInitialized && authenticated && !profileLoading) {
@@ -970,80 +900,6 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }.start()
-    }
-
-    private fun checkAppUpdate(silent: Boolean, force: Boolean) {
-        if (appUpdateChecking || appUpdateDownloading) return
-        appUpdateChecking = true
-        if (!silent) appUpdateMessage = null
-        Thread {
-            val result = AppUpdateManager.check(this, force = force)
-            runOnUiThread {
-                appUpdateChecking = false
-                result.onSuccess { update ->
-                    if (update != null) {
-                        availableAppUpdate = update
-                        appUpdateMessage = null
-                    } else if (!silent && force) {
-                        Toast.makeText(this, "Установлена актуальная версия TrueWeb", Toast.LENGTH_SHORT).show()
-                    }
-                }.onFailure {
-                    if (!silent) {
-                        Toast.makeText(this, "Сервер обновлений сейчас недоступен", Toast.LENGTH_LONG).show()
-                    }
-                }
-            }
-        }.start()
-    }
-
-    private fun downloadAndInstallUpdate(update: AppUpdateManager.UpdateInfo) {
-        if (appUpdateDownloading) return
-        appUpdateDownloading = true
-        appUpdateMessage = "Скачиваем и проверяем обновление…"
-        Thread {
-            val result = AppUpdateManager.download(this, update)
-            runOnUiThread {
-                appUpdateDownloading = false
-                result.onSuccess { apk ->
-                    appUpdateMessage = "Обновление загружено. Откроется системная установка Android."
-                    requestInstallApk(apk)
-                }.onFailure {
-                    appUpdateMessage = "Не удалось скачать или проверить обновление. Текущая версия не изменена."
-                    Toast.makeText(this, appUpdateMessage, Toast.LENGTH_LONG).show()
-                }
-            }
-        }.start()
-    }
-
-    private fun canInstallPackages(): Boolean =
-        Build.VERSION.SDK_INT < Build.VERSION_CODES.O || packageManager.canRequestPackageInstalls()
-
-    private fun requestInstallApk(apk: File) {
-        if (!apk.exists()) {
-            Toast.makeText(this, "Файл обновления не найден", Toast.LENGTH_SHORT).show()
-            return
-        }
-        if (!canInstallPackages() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            pendingUpdateApk = apk
-            val intent = Intent(
-                Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                Uri.parse("package:$packageName")
-            )
-            unknownSourcesLauncher.launch(intent)
-            return
-        }
-        launchPackageInstaller(apk)
-    }
-
-    private fun launchPackageInstaller(apk: File) {
-        val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", apk)
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(uri, "application/vnd.android.package-archive")
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        runCatching { startActivity(intent) }
-            .onFailure { Toast.makeText(this, "Не удалось открыть установщик Android", Toast.LENGTH_LONG).show() }
     }
 
     private fun openExternal(url: String) {
