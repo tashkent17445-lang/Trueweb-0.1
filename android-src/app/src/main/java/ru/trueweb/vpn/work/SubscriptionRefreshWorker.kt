@@ -48,7 +48,10 @@ class SubscriptionRefreshWorker(
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
-            val request = PeriodicWorkRequestBuilder<SubscriptionRefreshWorker>(1, TimeUnit.HOURS)
+            val request = PeriodicWorkRequestBuilder<SubscriptionRefreshWorker>(
+                6, TimeUnit.HOURS,
+                1, TimeUnit.HOURS
+            )
                 .setConstraints(constraints)
                 .build()
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
