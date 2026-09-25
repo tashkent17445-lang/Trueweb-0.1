@@ -12,6 +12,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: trueweb-direct-apk
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
