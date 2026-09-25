@@ -74,9 +74,12 @@ fun HomeScreen(
     showBatteryOptimizationNotice: Boolean,
     geoDataLastUpdatedMs: Long,
     geoDataRefreshing: Boolean,
+    selfUpdateEnabled: Boolean,
+    appUpdateChecking: Boolean,
     onBatterySettings: () -> Unit,
     onDismissBatteryNotice: () -> Unit,
     onGeoDataRefresh: () -> Unit,
+    onAppUpdateCheck: () -> Unit,
     onConnectClick: () -> Unit,
     onTrialClick: () -> Unit,
     onRefresh: () -> Unit,
@@ -680,6 +683,24 @@ fun HomeScreen(
                                         modifier = Modifier.fillMaxWidth().height(50.dp),
                                         shape = RoundedCornerShape(14.dp)
                                     ) { Text(t("Скопировать диагностику", "Copy diagnostics")) }
+
+                                    if (selfUpdateEnabled) {
+                                        SettingsSectionTitle(t("Обновления", "Updates"))
+                                        OutlinedButton(
+                                            onClick = onAppUpdateCheck,
+                                            enabled = !appUpdateChecking,
+                                            modifier = Modifier.fillMaxWidth().height(50.dp),
+                                            shape = RoundedCornerShape(14.dp)
+                                        ) {
+                                            Text(
+                                                if (appUpdateChecking) {
+                                                    t("Проверяем обновление…", "Checking for updates…")
+                                                } else {
+                                                    t("Проверить обновления", "Check for updates")
+                                                }
+                                            )
+                                        }
+                                    }
 
                                     SettingsSectionTitle(t("Аккаунт", "Account"))
                                     OutlinedButton(
