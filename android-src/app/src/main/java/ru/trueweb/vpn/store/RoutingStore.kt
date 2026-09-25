@@ -1,11 +1,15 @@
 package ru.trueweb.vpn.store
 
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import org.json.JSONArray
 import ru.trueweb.vpn.model.RoutingPolicy
 
 class RoutingStore(context: Context) {
-    private val prefs = context.getSharedPreferences("trueweb_routing", Context.MODE_PRIVATE)
+    private val appContext = context.applicationContext
+    private val prefs = appContext.getSharedPreferences("trueweb_routing", Context.MODE_PRIVATE)
 
     val updatedAtMs: Long
         get() = prefs.getLong("updated_at", 0L)
@@ -31,18 +35,14 @@ class RoutingStore(context: Context) {
         return RoutingPolicy(
             smartAuto = prefs.getBoolean("smart_auto", true),
             bypassRu = prefs.getBoolean("bypass_ru", true),
-            // Browsers must always stay inside TrueWeb. A browser can open any site,
-            // so excluding the whole app is too broad even when the server sends it.
-            excludedPackages = packages
-                .filterNot { it in FORCE_VPN_PACKAGES }
-                .distinct()
+            excludedPackages = filterExcludedPackages(packages)
         )
     }
 
     fun save(policy: RoutingPolicy) {
-        val packages = (policy.excludedPackages.ifEmpty { DEFAULT_EXCLUDED_PACKAGES })
-            .filterNot { it in FORCE_VPN_PACKAGES }
-            .distinct()
+        val packages = filterExcludedPackages(
+            policy.excludedPackages.ifEmpty { DEFAULT_EXCLUDED_PACKAGES }
+        )
         val arr = JSONArray().apply { packages.forEach { put(it) } }
         prefs.edit()
             .putBoolean("smart_auto", policy.smartAuto)
@@ -50,6 +50,35 @@ class RoutingStore(context: Context) {
             .putString("excluded_packages", arr.toString())
             .putLong("updated_at", System.currentTimeMillis())
             .apply()
+    }
+
+    /**
+     * Browsers must never be excluded at Android VpnService level.
+     *
+     * A browser can open both Russian and foreign sites, so app-level bypass is too broad.
+     * Keeping browsers in the tunnel lets Xray decide per destination:
+     * Russian domains/IPs -> direct, everything else -> TrueWeb VPN.
+     */
+    private fun filterExcludedPackages(packages: List<String>): List<String> {
+        val forceVpn = FORCE_VPN_PACKAGES + installedBrowserPackages()
+        return packages
+            .map(String::trim)
+            .filter(String::isNotBlank)
+            .filterNot { it in forceVpn }
+            .distinct()
+    }
+
+    private fun installedBrowserPackages(): Set<String> {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://example.com"))
+            .addCategory(Intent.CATEGORY_BROWSABLE)
+
+        return runCatching {
+            @Suppress("DEPRECATION")
+            appContext.packageManager
+                .queryIntentActivities(intent, PackageManager.MATCH_ALL)
+                .mapNotNull { it.activityInfo?.packageName?.trim()?.takeIf(String::isNotBlank) }
+                .toSet()
+        }.getOrDefault(emptySet())
     }
 
     companion object {
@@ -68,11 +97,27 @@ class RoutingStore(context: Context) {
             "ru.yandex.yandexmaps"
         )
 
-        // Russian browsers are intentionally never excluded from the VPN tunnel.
-        // This also overrides an older cached/server routing list after app update.
+        // Fallback protection for common browsers. Installed browsers are detected dynamically too.
         val FORCE_VPN_PACKAGES = setOf(
-            "com.yandex.browser", // Yandex Browser
-            "ru.mail.browser"     // Atom Browser
+            "com.yandex.browser",
+            "ru.mail.browser",
+            "com.android.chrome",
+            "com.chrome.beta",
+            "com.chrome.dev",
+            "com.chrome.canary",
+            "org.mozilla.firefox",
+            "org.mozilla.firefox_beta",
+            "com.microsoft.emmx",
+            "com.opera.browser",
+            "com.opera.mini.native",
+            "com.brave.browser",
+            "com.sec.android.app.sbrowser",
+            "com.huawei.browser",
+            "com.mi.globalbrowser",
+            "com.vivaldi.browser",
+            "com.kiwibrowser.browser",
+            "com.duckduckgo.mobile.android",
+            "com.android.browser"
         )
     }
 }
