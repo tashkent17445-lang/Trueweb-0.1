@@ -15,6 +15,8 @@ object AppConfig {
     const val TELEGRAM_GROUP_URL = "https://t.me/proxi_vpn_bs"
     const val SUPPORT_URL = "https://t.me/TrueWebHelp"
 
+    const val APP_UPDATE_MANIFEST_URL = "https://trueweb24.ru:8443/android/latest.json"
+
     const val PRIVACY_URL = "https://trueweb24.ru/legal/privacy"
     const val TERMS_URL = "https://trueweb24.ru/legal/terms"
     const val RULES_URL = "https://trueweb24.ru/legal/rules"
