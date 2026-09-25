@@ -1,4 +1,4 @@
-name: Build TrueWeb AppGallery v0.9.7
+name: Build TrueWeb AppGallery v0.9.8
 
 on:
   workflow_dispatch:
@@ -128,14 +128,14 @@ jobs:
         run: |
           set -euo pipefail
 
-          gradle             clean             :app:assembleRelease             --stacktrace             --no-daemon             --no-build-cache
+          gradle             clean             :app:assembleAppgalleryRelease             --stacktrace             --no-daemon             --no-build-cache
 
       - name: Verify APK signature
         shell: bash
         run: |
           set -euo pipefail
 
-          APK="android-src/app/build/outputs/apk/release/app-release.apk"
+          APK="android-src/app/build/outputs/apk/appgallery/release/app-appgallery-release.apk"
           APKSIGNER="${ANDROID_SDK_ROOT}/build-tools/36.0.0/apksigner"
 
           test -s "$APK"
@@ -148,18 +148,18 @@ jobs:
           set -euo pipefail
 
           mkdir -p release
-          cp             android-src/app/build/outputs/apk/release/app-release.apk             release/TrueWeb-v0.9.7-AppGallery.apk
+          cp             android-src/app/build/outputs/apk/appgallery/release/app-appgallery-release.apk             release/TrueWeb-v0.9.8-AppGallery.apk
 
-          sha256sum             release/TrueWeb-v0.9.7-AppGallery.apk             | tee release/TrueWeb-v0.9.7-AppGallery.apk.sha256
+          sha256sum             release/TrueWeb-v0.9.8-AppGallery.apk             | tee release/TrueWeb-v0.9.8-AppGallery.apk.sha256
 
           ls -lh release/
 
       - name: Upload AppGallery APK
         uses: actions/upload-artifact@v4
         with:
-          name: TrueWeb-v0.9.7-AppGallery
+          name: TrueWeb-v0.9.8-AppGallery
           path: |
-            release/TrueWeb-v0.9.7-AppGallery.apk
-            release/TrueWeb-v0.9.7-AppGallery.apk.sha256
+            release/TrueWeb-v0.9.8-AppGallery.apk
+            release/TrueWeb-v0.9.8-AppGallery.apk.sha256
           if-no-files-found: error
           retention-days: 30
