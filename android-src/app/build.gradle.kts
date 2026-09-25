@@ -13,8 +13,8 @@ android {
         applicationId = "ru.trueweb.vpn"
         minSdk = 26
         targetSdk = 37
-        versionCode = 26
-        versionName = "0.9.7"
+        versionCode = 27
+        versionName = "0.9.8"
         ndk {
             abiFilters += listOf("arm64-v8a")
         }
@@ -37,6 +37,18 @@ android {
             isMinifyEnabled = false
             isShrinkResources = false
             signingConfig = signingConfigs.getByName("release")
+        }
+    }
+
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("direct") {
+            dimension = "distribution"
+            buildConfigField("boolean", "SELF_UPDATE_ENABLED", "true")
+        }
+        create("appgallery") {
+            dimension = "distribution"
+            buildConfigField("boolean", "SELF_UPDATE_ENABLED", "false")
         }
     }
 
