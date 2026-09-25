@@ -29,6 +29,7 @@ import ru.trueweb.vpn.auth.AuthBackend
 import ru.trueweb.vpn.auth.SessionStore
 import ru.trueweb.vpn.huawei.HuaweiAuthManager
 import ru.trueweb.vpn.model.*
+import ru.trueweb.vpn.store.AppUpdateManager
 import ru.trueweb.vpn.store.DeviceIdentity
 import ru.trueweb.vpn.store.GeoDataManager
 import ru.trueweb.vpn.store.LegalConsentStore
@@ -36,10 +37,12 @@ import ru.trueweb.vpn.store.PendingPaymentStore
 import ru.trueweb.vpn.store.RoutingStore
 import ru.trueweb.vpn.store.ServerStore
 import ru.trueweb.vpn.store.ThemeStore
+import ru.trueweb.vpn.store.UpdateInstaller
 import ru.trueweb.vpn.ui.*
 import ru.trueweb.vpn.vpn.TrueWebVpnService
 import ru.trueweb.vpn.work.GeoDataRefreshWorker
 import ru.trueweb.vpn.work.SubscriptionRefreshWorker
+import java.io.File
 
 class MainActivity : ComponentActivity() {
     private fun genericAppError(): String =
@@ -87,6 +90,11 @@ class MainActivity : ComponentActivity() {
     private var batteryNoticeDismissed by mutableStateOf(false)
     private var geoDataLastUpdatedMs by mutableLongStateOf(0L)
     private var geoDataRefreshing by mutableStateOf(false)
+    private var availableAppUpdate by mutableStateOf<AppUpdateManager.UpdateInfo?>(null)
+    private var appUpdateChecking by mutableStateOf(false)
+    private var appUpdateDownloading by mutableStateOf(false)
+    private var appUpdateMessage by mutableStateOf<String?>(null)
+    private var pendingUpdateApk: File? = null
 
     private val vpnPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -94,6 +102,25 @@ class MainActivity : ComponentActivity() {
                 prepareVpnDataAndStart()
             } else {
                 Toast.makeText(this, t("Без разрешения Android VPN подключение невозможно", "Android VPN permission is required to connect"), Toast.LENGTH_SHORT).show()
+            }
+        }
+
+    private val unknownSourcesLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            if (!BuildConfig.SELF_UPDATE_ENABLED) return@registerForActivityResult
+            val apk = pendingUpdateApk
+            if (apk != null && UpdateInstaller.canInstallPackages(this)) {
+                pendingUpdateApk = null
+                launchPackageInstaller(apk)
+            } else if (apk != null) {
+                Toast.makeText(
+                    this,
+                    t(
+                        "Разрешите TrueWeb устанавливать обновления из этого источника",
+                        "Allow TrueWeb to install updates from this source"
+                    ),
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
 
@@ -111,6 +138,11 @@ class MainActivity : ComponentActivity() {
         batteryNoticeDismissed = getSharedPreferences("trueweb_ui", MODE_PRIVATE)
             .getBoolean("battery_notice_dismissed", false)
         refreshBatteryOptimizationState()
+        if (BuildConfig.SELF_UPDATE_ENABLED && pendingUpdateApk != null && UpdateInstaller.canInstallPackages(this)) {
+            val apk = pendingUpdateApk
+            pendingUpdateApk = null
+            if (apk != null) launchPackageInstaller(apk)
+        }
         geoDataLastUpdatedMs = GeoDataManager.lastSuccessMs(this)
         GeoDataRefreshWorker.schedule(this)
         GeoDataRefreshWorker.refreshIfStale(this)
@@ -204,9 +236,12 @@ class MainActivity : ComponentActivity() {
                             showBatteryOptimizationNotice = batteryOptimizationRestricted && !batteryNoticeDismissed,
                             geoDataLastUpdatedMs = geoDataLastUpdatedMs,
                             geoDataRefreshing = geoDataRefreshing,
+                            selfUpdateEnabled = BuildConfig.SELF_UPDATE_ENABLED,
+                            appUpdateChecking = appUpdateChecking,
                             onBatterySettings = { openBatteryOptimizationSettings() },
                             onDismissBatteryNotice = { dismissBatteryNotice() },
                             onGeoDataRefresh = { refreshGeoDataNow() },
+                            onAppUpdateCheck = { checkAppUpdate(silent = false, force = true) },
                             onConnectClick = { toggleNormalVpn(info, vpnState) },
                             onTrialClick = { activateTrial() },
                             onRefresh = { loadData(forceServers = true) },
@@ -228,9 +263,71 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                if (BuildConfig.SELF_UPDATE_ENABLED) {
+                    val update = availableAppUpdate
+                    if (update != null) {
+                        AlertDialog(
+                            onDismissRequest = { if (!appUpdateDownloading) availableAppUpdate = null },
+                            title = {
+                                Text(
+                                    t(
+                                        "Доступно обновление TrueWeb ${update.versionName}",
+                                        "TrueWeb ${update.versionName} is available"
+                                    )
+                                )
+                            },
+                            text = {
+                                Column {
+                                    Text(
+                                        if (update.notes.isBlank()) {
+                                            t(
+                                                "Можно обновить приложение сейчас. Аккаунт, подписка и настройки сохранятся.",
+                                                "You can update now. Your account, subscription and settings will be preserved."
+                                            )
+                                        } else {
+                                            update.notes
+                                        }
+                                    )
+                                    if (!appUpdateMessage.isNullOrBlank()) {
+                                        Spacer(Modifier.height(12.dp))
+                                        Text(appUpdateMessage!!, style = MaterialTheme.typography.bodySmall)
+                                    }
+                                    if (appUpdateDownloading) {
+                                        Spacer(Modifier.height(14.dp))
+                                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                                    }
+                                }
+                            },
+                            confirmButton = {
+                                Button(
+                                    onClick = { downloadAndInstallUpdate(update) },
+                                    enabled = !appUpdateDownloading
+                                ) {
+                                    Text(
+                                        if (appUpdateDownloading) {
+                                            t("Скачиваем…", "Downloading…")
+                                        } else {
+                                            t("Обновить", "Update")
+                                        }
+                                    )
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(
+                                    onClick = { availableAppUpdate = null },
+                                    enabled = !appUpdateDownloading
+                                ) { Text(t("Позже", "Later")) }
+                            }
+                        )
+                    }
+                }
+
             }
         }
 
+        if (BuildConfig.SELF_UPDATE_ENABLED) {
+            checkAppUpdate(silent = true, force = false)
+        }
 
         if (authenticated) {
             SubscriptionRefreshWorker.schedule(this)
@@ -250,6 +347,11 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         refreshBatteryOptimizationState()
+        if (BuildConfig.SELF_UPDATE_ENABLED && pendingUpdateApk != null && UpdateInstaller.canInstallPackages(this)) {
+            val apk = pendingUpdateApk
+            pendingUpdateApk = null
+            if (apk != null) launchPackageInstaller(apk)
+        }
         geoDataLastUpdatedMs = GeoDataManager.lastSuccessMs(this)
         GeoDataRefreshWorker.refreshIfStale(this)
         if (this::sessionStore.isInitialized && authenticated && !profileLoading) {
@@ -1023,6 +1125,102 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }.start()
+    }
+
+    private fun checkAppUpdate(silent: Boolean, force: Boolean) {
+        if (!BuildConfig.SELF_UPDATE_ENABLED || appUpdateChecking || appUpdateDownloading) return
+        appUpdateChecking = true
+        if (!silent) appUpdateMessage = null
+        Thread {
+            val result = AppUpdateManager.check(this, force = force)
+            runOnUiThread {
+                appUpdateChecking = false
+                result.onSuccess { update ->
+                    if (update != null) {
+                        availableAppUpdate = update
+                        appUpdateMessage = null
+                    } else if (!silent && force) {
+                        Toast.makeText(
+                            this,
+                            t("Установлена актуальная версия TrueWeb", "The latest TrueWeb version is installed"),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }.onFailure {
+                    if (!silent) {
+                        Toast.makeText(
+                            this,
+                            t("Сервер обновлений сейчас недоступен", "The update server is currently unavailable"),
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+            }
+        }.start()
+    }
+
+    private fun downloadAndInstallUpdate(update: AppUpdateManager.UpdateInfo) {
+        if (!BuildConfig.SELF_UPDATE_ENABLED || appUpdateDownloading) return
+        appUpdateDownloading = true
+        appUpdateMessage = t("Скачиваем и проверяем обновление…", "Downloading and verifying update…")
+        Thread {
+            val result = AppUpdateManager.download(this, update)
+            runOnUiThread {
+                appUpdateDownloading = false
+                result.onSuccess { apk ->
+                    appUpdateMessage = t(
+                        "Обновление загружено. Откроется системная установка Android.",
+                        "Update downloaded. Android installer will open."
+                    )
+                    requestInstallApk(apk)
+                }.onFailure {
+                    appUpdateMessage = t(
+                        "Не удалось скачать или проверить обновление. Текущая версия не изменена.",
+                        "Could not download or verify the update. The installed version was not changed."
+                    )
+                    Toast.makeText(this, appUpdateMessage, Toast.LENGTH_LONG).show()
+                }
+            }
+        }.start()
+    }
+
+    private fun requestInstallApk(apk: File) {
+        if (!BuildConfig.SELF_UPDATE_ENABLED) return
+        if (!apk.exists()) {
+            Toast.makeText(
+                this,
+                t("Файл обновления не найден", "Update file was not found"),
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+
+        if (!UpdateInstaller.canInstallPackages(this)) {
+            pendingUpdateApk = apk
+            val permissionIntent = UpdateInstaller.permissionIntent(this)
+            if (permissionIntent != null) {
+                unknownSourcesLauncher.launch(permissionIntent)
+            } else {
+                Toast.makeText(
+                    this,
+                    t("Не удалось открыть разрешение на установку", "Could not open install permission"),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            return
+        }
+        launchPackageInstaller(apk)
+    }
+
+    private fun launchPackageInstaller(apk: File) {
+        UpdateInstaller.install(this, apk)
+            .onFailure {
+                Toast.makeText(
+                    this,
+                    t("Не удалось открыть установщик Android", "Could not open Android installer"),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
     }
 
     private fun openExternal(url: String) {
