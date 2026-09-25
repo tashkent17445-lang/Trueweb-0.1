@@ -74,7 +74,7 @@ class TrueWebVpnService : VpnService() {
         private const val CHANNEL_ID = "trueweb_vpn"
         private const val NOTIFICATION_ID = 1001
         private const val TCP_PROBE_TIMEOUT_MS = 2500
-        private const val NORMAL_HEALTH_SECONDS = 60L
+        private const val NORMAL_HEALTH_SECONDS = 180L
         private const val WL_RECOVERY_MIN_SECONDS = 170L
         private const val WL_RECOVERY_MAX_SECONDS = 211L
         private const val STABLE_PROBE_COUNT = 3
