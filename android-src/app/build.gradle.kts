@@ -13,8 +13,8 @@ android {
         applicationId = "ru.trueweb.vpn"
         minSdk = 26
         targetSdk = 37
-        versionCode = 25
-        versionName = "0.9.6"
+        versionCode = 26
+        versionName = "0.9.7"
         ndk {
             abiFilters += listOf("arm64-v8a")
         }
