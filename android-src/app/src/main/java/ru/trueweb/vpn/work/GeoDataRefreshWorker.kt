@@ -29,10 +29,14 @@ class GeoDataRefreshWorker(
 
         private fun constraints() = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
+            .setRequiresBatteryNotLow(true)
             .build()
 
         fun schedule(context: Context) {
-            val request = PeriodicWorkRequestBuilder<GeoDataRefreshWorker>(72, TimeUnit.HOURS)
+            val request = PeriodicWorkRequestBuilder<GeoDataRefreshWorker>(
+                72, TimeUnit.HOURS,
+                12, TimeUnit.HOURS
+            )
                 .setConstraints(constraints())
                 .build()
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
