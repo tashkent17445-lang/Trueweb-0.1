@@ -1,0 +1,98 @@
+name: Validate security hardening
+
+on:
+  push:
+    branches:
+      - security-hardening-0.9.9
+    paths:
+      - "android-src/**"
+      - ".github/workflows/security-validation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: trueweb-security-validation
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Setup Java
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Android SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER="${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
+        with:
+          gradle-version: "9.6.0"
+
+      - name: Download and verify Xray Android core
+        shell: bash
+        run: |
+          set -euo pipefail
+          LIBS="android-src/app/libs"
+          mkdir -p "$LIBS"
+          curl -fL --retry 4 --retry-delay 2 \
+            https://github.com/2dust/AndroidLibXrayLite/releases/download/v26.7.31/libv2ray.aar \
+            -o "$LIBS/libv2ray.aar"
+          echo "a6b51b525b72a114c10e34288392439b1897c9ff7ce2f8afd7ffdce9d91e93b3  $LIBS/libv2ray.aar" | sha256sum -c -
+
+      - name: Download and verify GeoData
+        shell: bash
+        run: |
+          set -euo pipefail
+          ASSETS="android-src/app/src/main/assets"
+          mkdir -p "$ASSETS"
+
+          download_release_asset() {
+            local repo="$1" asset="$2" target="$3"
+            local meta url digest sha
+            meta="$(curl -fsSL --retry 4 --retry-delay 2 \
+              -H 'Accept: application/vnd.github+json' \
+              "https://api.github.com/repos/$repo/releases/latest")"
+            url="$(jq -r --arg name "$asset" '.assets[] | select(.name == $name) | .browser_download_url' <<<"$meta" | head -1)"
+            digest="$(jq -r --arg name "$asset" '.assets[] | select(.name == $name) | .digest' <<<"$meta" | head -1)"
+            test -n "$url" && test "$url" != "null"
+            test -n "$digest" && test "$digest" != "null"
+            sha="${digest#sha256:}"
+            [[ "$sha" =~ ^[0-9a-fA-F]{64}$ ]]
+            curl -fL --retry 4 --retry-delay 2 "$url" -o "$target"
+            echo "$sha  $target" | sha256sum -c -
+          }
+
+          download_release_asset "v2fly/geoip" "geoip.dat" "$ASSETS/geoip.dat"
+          download_release_asset "v2fly/domain-list-community" "dlc.dat" "$ASSETS/geosite.dat"
+
+          test -s "$ASSETS/geoip.dat"
+          test -s "$ASSETS/geosite.dat"
+
+      - name: Compile direct debug
+        working-directory: android-src
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle clean :app:assembleDirectDebug --stacktrace --no-daemon --no-build-cache
+
+      - name: Validate release R8
+        working-directory: android-src
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle :app:minifyDirectReleaseWithR8 --stacktrace --no-daemon --no-build-cache

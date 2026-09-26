@@ -383,8 +383,7 @@ class MainActivity : ComponentActivity() {
         }
 
         val isVerifiedAppLink = uri.scheme == "https" && uri.host == "trueweb24.ru" && uri.path == "/mobile-auth/callback"
-        val isAppScheme = uri.scheme == "trueweb" && uri.host == "auth" && uri.path == "/callback"
-        if (!isVerifiedAppLink && !isAppScheme) return
+        if (!isVerifiedAppLink) return
 
         val error = uri.getQueryParameter("error")
         if (!error.isNullOrBlank()) {
