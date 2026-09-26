@@ -70,15 +70,6 @@ class SessionStore(context: Context) {
         get() = prefs.getBoolean("needs_telegram_link", false)
         set(value) = prefs.edit().putBoolean("needs_telegram_link", value).apply()
 
-    var telegramAuthState: String?
-        get() = prefs.getString("telegram_auth_state", null)
-        set(value) {
-            prefs.edit().apply {
-                if (value.isNullOrBlank()) remove("telegram_auth_state")
-                else putString("telegram_auth_state", value)
-            }.apply()
-        }
-
     val isAuthenticated: Boolean get() = !accessToken.isNullOrBlank()
     val isEmailAccount: Boolean get() = authMethod == "email"
 
