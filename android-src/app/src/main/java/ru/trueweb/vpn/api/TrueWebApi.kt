@@ -9,7 +9,6 @@ import ru.trueweb.vpn.model.*
 import ru.trueweb.vpn.store.DeviceIdentity
 import java.net.HttpURLConnection
 import java.net.URL
-import java.net.URLEncoder
 
 object TrueWebApi {
     data class EmailStartResult(
@@ -171,17 +170,8 @@ object TrueWebApi {
      * while the VPN is active some devices can time out on the bridge itself. The app requests
      * the 302 itself and opens only oauth.telegram.org externally.
      */
-    fun telegramAuthUrl(state: String): Result<String> = runCatching {
-        val callback = "https://trueweb24.ru/mobile-auth/callback"
-        val startUrl = buildString {
-            append(AppConfig.TELEGRAM_AUTH_START)
-            append("?state=")
-            append(URLEncoder.encode(state, "UTF-8"))
-            append("&redirect_uri=")
-            append(URLEncoder.encode(callback, "UTF-8"))
-        }
-
-        val conn = (URL(startUrl).openConnection() as HttpURLConnection).apply {
+    fun telegramAuthUrl(): Result<String> = runCatching {
+        val conn = (URL(AppConfig.TELEGRAM_AUTH_START).openConnection() as HttpURLConnection).apply {
             requestMethod = "GET"
             instanceFollowRedirects = false
             connectTimeout = 15_000
