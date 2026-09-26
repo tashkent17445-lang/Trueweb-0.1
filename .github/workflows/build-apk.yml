@@ -1,4 +1,4 @@
-name: Build TrueWeb APK v0.9.8 Release
+name: Build TrueWeb APK v0.9.9 Release
 
 on:
   workflow_dispatch:
@@ -132,18 +132,18 @@ jobs:
           set -euo pipefail
           mkdir -p release
 
-          cp             android-src/app/build/outputs/apk/direct/release/app-direct-release.apk             release/TrueWeb-v0.9.8.apk
+          cp             android-src/app/build/outputs/apk/direct/release/app-direct-release.apk             release/TrueWeb-v0.9.9.apk
 
-          sha256sum             release/TrueWeb-v0.9.8.apk             | tee release/TrueWeb-v0.9.8.apk.sha256
+          sha256sum             release/TrueWeb-v0.9.9.apk             | tee release/TrueWeb-v0.9.9.apk.sha256
 
           ls -lh release/
 
       - name: Upload APK
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: TrueWeb-v0.9.8-Release
+          name: TrueWeb-v0.9.9-Release
           path: |
-            release/TrueWeb-v0.9.8.apk
-            release/TrueWeb-v0.9.8.apk.sha256
+            release/TrueWeb-v0.9.9.apk
+            release/TrueWeb-v0.9.9.apk.sha256
           if-no-files-found: error
           retention-days: 30
