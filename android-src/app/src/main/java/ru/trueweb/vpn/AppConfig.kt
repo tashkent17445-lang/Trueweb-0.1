@@ -5,8 +5,8 @@ object AppConfig {
     // same HTTPS bridge that already exposes /open-app.
     const val API_BASE = "https://trueweb24.ru:8443/api/mobile"
 
-    // The backend starts Telegram OIDC and redirects back to the app through
-    // trueweb://auth/callback?code=ONE_TIME_CODE.
+    // The backend starts Telegram OIDC and returns to the verified Android App Link:
+    // https://trueweb24.ru/mobile-auth/callback?code=ONE_TIME_CODE.
     const val TELEGRAM_AUTH_START = "$API_BASE/auth/telegram/start"
 
     // Backend redirect keeps the current MTProto host/port/secret out of the APK.
