@@ -13,8 +13,8 @@ android {
         applicationId = "ru.trueweb.vpn"
         minSdk = 26
         targetSdk = 37
-        versionCode = 28
-        versionName = "0.9.9"
+        versionCode = 29
+        versionName = "0.9.10"
         ndk {
             abiFilters += listOf("arm64-v8a")
         }
@@ -45,10 +45,12 @@ android {
         create("direct") {
             dimension = "distribution"
             buildConfigField("boolean", "SELF_UPDATE_ENABLED", "true")
+            buildConfigField("boolean", "SHOW_HUAWEI_LOGIN", "false")
         }
         create("appgallery") {
             dimension = "distribution"
             buildConfigField("boolean", "SELF_UPDATE_ENABLED", "false")
+            buildConfigField("boolean", "SHOW_HUAWEI_LOGIN", "true")
         }
     }
 
