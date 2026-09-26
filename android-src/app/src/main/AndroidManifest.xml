@@ -58,16 +58,6 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="trueweb"
-                    android:host="auth"
-                    android:pathPrefix="/callback" />
-            </intent-filter>
-
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:scheme="trueweb"
                     android:host="payment"
                     android:pathPrefix="/return" />
             </intent-filter>
