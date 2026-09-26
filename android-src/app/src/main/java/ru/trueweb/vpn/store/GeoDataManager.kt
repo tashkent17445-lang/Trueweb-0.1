@@ -1,19 +1,28 @@
 package ru.trueweb.vpn.store
 
 import android.content.Context
+import org.json.JSONObject
 import ru.trueweb.vpn.BuildConfig
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import java.security.MessageDigest
 
 object GeoDataManager {
     private const val PREFS = "trueweb_geodata"
     private const val KEY_LAST_SUCCESS = "last_success_ms"
     const val REFRESH_INTERVAL_MS = 72L * 60L * 60L * 1000L
 
-    private const val GEOIP_URL = "https://github.com/v2fly/geoip/releases/latest/download/geoip.dat"
-    private const val GEOSITE_URL = "https://github.com/v2fly/domain-list-community/releases/latest/download/dlc.dat"
+    private const val GEOIP_REPO = "v2fly/geoip"
+    private const val GEOIP_ASSET = "geoip.dat"
+    private const val GEOSITE_REPO = "v2fly/domain-list-community"
+    private const val GEOSITE_ASSET = "dlc.dat"
     private const val MIN_VALID_BYTES = 64L * 1024L
+
+    private data class VerifiedAsset(
+        val url: String,
+        val sha256: String
+    )
 
     fun lastSuccessMs(context: Context): Long =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getLong(KEY_LAST_SUCCESS, 0L)
@@ -47,9 +56,9 @@ object GeoDataManager {
     }
 
     /**
-     * Downloads both databases first and only then replaces the working pair.
-     * A failed/blocked GitHub request therefore never breaks the currently
-     * installed GeoData.
+     * Download metadata first and verify each release asset by the SHA-256 digest
+     * published by GitHub. A failed request or digest mismatch never replaces the
+     * currently working GeoData pair.
      */
     fun updateNow(context: Context, force: Boolean = false): Result<Long> = runCatching {
         ensureBundledAssets(context)
@@ -61,8 +70,12 @@ object GeoDataManager {
         geositeTmp.delete()
 
         try {
-            download(GEOIP_URL, geoipTmp)
-            download(GEOSITE_URL, geositeTmp)
+            val geoip = resolveLatestAsset(GEOIP_REPO, GEOIP_ASSET)
+            val geosite = resolveLatestAsset(GEOSITE_REPO, GEOSITE_ASSET)
+
+            downloadVerified(geoip, geoipTmp)
+            downloadVerified(geosite, geositeTmp)
+
             require(geoipTmp.length() >= MIN_VALID_BYTES) { "geoip.dat download is too small" }
             require(geositeTmp.length() >= MIN_VALID_BYTES) { "geosite.dat download is too small" }
 
@@ -95,21 +108,76 @@ object GeoDataManager {
         }
     }
 
-    private fun download(url: String, target: File) {
+    private fun resolveLatestAsset(repository: String, assetName: String): VerifiedAsset {
+        val apiUrl = "https://api.github.com/repos/$repository/releases/latest"
         var connection: HttpURLConnection? = null
         try {
-            connection = URL(url).openConnection() as HttpURLConnection
+            connection = URL(apiUrl).openConnection() as HttpURLConnection
+            connection.instanceFollowRedirects = true
+            connection.connectTimeout = 12_000
+            connection.readTimeout = 20_000
+            connection.requestMethod = "GET"
+            connection.setRequestProperty("User-Agent", "TrueWeb-Android/${BuildConfig.VERSION_NAME} GeoData")
+            connection.setRequestProperty("Accept", "application/vnd.github+json")
+
+            val code = connection.responseCode
+            require(code in 200..299) { "GeoData metadata HTTP $code" }
+
+            val root = connection.inputStream.bufferedReader(Charsets.UTF_8).use { reader ->
+                JSONObject(reader.readText())
+            }
+            val assets = root.optJSONArray("assets") ?: error("GeoData release assets missing")
+
+            for (i in 0 until assets.length()) {
+                val item = assets.optJSONObject(i) ?: continue
+                if (item.optString("name") != assetName) continue
+
+                val url = item.optString("browser_download_url").trim()
+                val digest = item.optString("digest").trim().lowercase()
+                val sha256 = digest.removePrefix("sha256:")
+
+                require(url.isNotBlank()) { "GeoData asset URL missing" }
+                require(URL(url).protocol.equals("https", ignoreCase = true)) { "GeoData asset URL is not HTTPS" }
+                require(sha256.matches(Regex("[0-9a-f]{64}"))) { "GeoData SHA-256 digest missing" }
+
+                return VerifiedAsset(url, sha256)
+            }
+
+            error("GeoData asset $assetName not found")
+        } finally {
+            connection?.disconnect()
+        }
+    }
+
+    private fun downloadVerified(asset: VerifiedAsset, target: File) {
+        var connection: HttpURLConnection? = null
+        try {
+            connection = URL(asset.url).openConnection() as HttpURLConnection
             connection.instanceFollowRedirects = true
             connection.connectTimeout = 12_000
             connection.readTimeout = 30_000
             connection.requestMethod = "GET"
             connection.setRequestProperty("User-Agent", "TrueWeb-Android/${BuildConfig.VERSION_NAME} GeoData")
             connection.setRequestProperty("Accept", "application/octet-stream,*/*;q=0.5")
+
             val code = connection.responseCode
             require(code in 200..299) { "GeoData HTTP $code" }
+
+            val digest = MessageDigest.getInstance("SHA-256")
             connection.inputStream.use { input ->
-                target.outputStream().use { output -> input.copyTo(output) }
+                target.outputStream().use { output ->
+                    val buffer = ByteArray(128 * 1024)
+                    while (true) {
+                        val read = input.read(buffer)
+                        if (read <= 0) break
+                        digest.update(buffer, 0, read)
+                        output.write(buffer, 0, read)
+                    }
+                }
             }
+
+            val actual = digest.digest().joinToString("") { "%02x".format(it) }
+            require(actual.equals(asset.sha256, ignoreCase = true)) { "GeoData SHA-256 mismatch" }
         } finally {
             connection?.disconnect()
         }
