@@ -53,6 +53,8 @@ jobs:
 
           curl -fL             --retry 4             --retry-delay 2             https://github.com/2dust/AndroidLibXrayLite/releases/download/v26.7.31/libv2ray.aar             -o "$LIBS/libv2ray.aar"
 
+          echo "a6b51b525b72a114c10e34288392439b1897c9ff7ce2f8afd7ffdce9d91e93b3  $LIBS/libv2ray.aar" | sha256sum -c -
+
           unzip -t "$LIBS/libv2ray.aar" >/dev/null
           unzip -l "$LIBS/libv2ray.aar" | grep -q 'classes.jar'
           unzip -l "$LIBS/libv2ray.aar" | grep -q 'jni/arm64-v8a/'
