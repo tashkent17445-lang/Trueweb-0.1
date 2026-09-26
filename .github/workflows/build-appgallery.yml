@@ -1,4 +1,4 @@
-name: Build TrueWeb AppGallery v0.9.8
+name: Build TrueWeb AppGallery v0.9.9
 
 on:
   workflow_dispatch:
@@ -162,18 +162,18 @@ jobs:
           set -euo pipefail
 
           mkdir -p release
-          cp             android-src/app/build/outputs/apk/appgallery/release/app-appgallery-release.apk             release/TrueWeb-v0.9.8-AppGallery.apk
+          cp             android-src/app/build/outputs/apk/appgallery/release/app-appgallery-release.apk             release/TrueWeb-v0.9.9-AppGallery.apk
 
-          sha256sum             release/TrueWeb-v0.9.8-AppGallery.apk             | tee release/TrueWeb-v0.9.8-AppGallery.apk.sha256
+          sha256sum             release/TrueWeb-v0.9.9-AppGallery.apk             | tee release/TrueWeb-v0.9.9-AppGallery.apk.sha256
 
           ls -lh release/
 
       - name: Upload AppGallery APK
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: TrueWeb-v0.9.8-AppGallery
+          name: TrueWeb-v0.9.9-AppGallery
           path: |
-            release/TrueWeb-v0.9.8-AppGallery.apk
-            release/TrueWeb-v0.9.8-AppGallery.apk.sha256
+            release/TrueWeb-v0.9.9-AppGallery.apk
+            release/TrueWeb-v0.9.9-AppGallery.apk.sha256
           if-no-files-found: error
           retention-days: 30
