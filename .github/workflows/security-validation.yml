@@ -75,3 +75,10 @@ jobs:
         run: |
           set -euo pipefail
           gradle clean :app:assembleDirectDebug --stacktrace --no-daemon --no-build-cache
+
+      - name: Validate release R8
+        working-directory: android-src
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle :app:minifyDirectReleaseWithR8 --stacktrace --no-daemon --no-build-cache
