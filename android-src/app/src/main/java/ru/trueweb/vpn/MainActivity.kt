@@ -43,6 +43,7 @@ import ru.trueweb.vpn.vpn.TrueWebVpnService
 import ru.trueweb.vpn.work.GeoDataRefreshWorker
 import ru.trueweb.vpn.work.SubscriptionRefreshWorker
 import java.io.File
+import java.util.UUID
 
 class MainActivity : ComponentActivity() {
     private fun genericAppError(): String =
@@ -386,14 +387,50 @@ class MainActivity : ComponentActivity() {
         val isAppScheme = uri.scheme == "trueweb" && uri.host == "auth" && uri.path == "/callback"
         if (!isVerifiedAppLink && !isAppScheme) return
 
+        val expectedState = sessionStore.telegramAuthState
+        val returnedState = uri.getQueryParameter("state")
+
+        // New auth flow: the backend returns to the verified HTTPS App Link and
+        // must echo the state that was generated before the browser was opened.
+        // The custom trueweb:// callback remains temporarily for compatibility
+        // with the current backend and can be removed after server migration.
+        if (isVerifiedAppLink) {
+            if (expectedState.isNullOrBlank() || returnedState.isNullOrBlank() || expectedState != returnedState) {
+                sessionStore.telegramAuthState = null
+                sessionStore.telegramLinkPending = false
+                authInProgress = false
+                authError = t(
+                    "Не удалось проверить вход через Telegram. Повторите попытку.",
+                    "Could not verify Telegram sign-in. Please try again."
+                )
+                return
+            }
+        } else if (
+            !returnedState.isNullOrBlank() &&
+            !expectedState.isNullOrBlank() &&
+            expectedState != returnedState
+        ) {
+            sessionStore.telegramAuthState = null
+            sessionStore.telegramLinkPending = false
+            authInProgress = false
+            authError = t(
+                "Не удалось проверить вход через Telegram. Повторите попытку.",
+                "Could not verify Telegram sign-in. Please try again."
+            )
+            return
+        }
+
         val error = uri.getQueryParameter("error")
         if (!error.isNullOrBlank()) {
+            sessionStore.telegramAuthState = null
+            sessionStore.telegramLinkPending = false
             authError = error
             authInProgress = false
             return
         }
 
         val code = uri.getQueryParameter("code") ?: return
+        sessionStore.telegramAuthState = null
         authInProgress = true
         authError = null
         val linkingTelegram = authenticated && sessionStore.needsTelegramLink && sessionStore.telegramLinkPending
@@ -601,14 +638,17 @@ class MainActivity : ComponentActivity() {
         authInProgress = true
         authError = null
         sessionStore.telegramLinkPending = linking
+        val authState = UUID.randomUUID().toString()
+        sessionStore.telegramAuthState = authState
 
         Thread {
-            val result = TrueWebApi.telegramAuthUrl()
+            val result = TrueWebApi.telegramAuthUrl(authState)
             runOnUiThread {
                 authInProgress = false
                 result.onSuccess { oauthUrl ->
                     openExternal(oauthUrl)
                 }.onFailure {
+                    sessionStore.telegramAuthState = null
                     if (linking) sessionStore.telegramLinkPending = false
                     authError = if (linking) {
                         t(
