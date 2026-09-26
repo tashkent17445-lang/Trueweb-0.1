@@ -393,7 +393,6 @@ class MainActivity : ComponentActivity() {
         }
 
         val code = uri.getQueryParameter("code") ?: return
-        sessionStore.telegramAuthState = null
         authInProgress = true
         authError = null
         val linkingTelegram = authenticated && sessionStore.needsTelegramLink && sessionStore.telegramLinkPending
