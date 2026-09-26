@@ -194,6 +194,7 @@ class MainActivity : ComponentActivity() {
                         errorText = authError,
                         themeMode = themeMode,
                         emailCodeSentTo = emailCodeSentTo,
+                        showHuaweiLogin = BuildConfig.SHOW_HUAWEI_LOGIN,
                         onProxyClick = { openExternal(AppConfig.TELEGRAM_PROXY_URL) },
                         onHuaweiLoginClick = { beginHuaweiLogin() },
                         onTelegramLoginClick = { beginTelegramBrowser(linking = false) },
